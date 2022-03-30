@@ -7,11 +7,11 @@
     <Version>1.0.0</Version>
     <PackageId>DIB</PackageId>
     <AssemblyName>DIB</AssemblyName>
-    <Authors>Your names go here (optional since this is hosted in a public Github repository)</Authors>
-    <Product>The bot name goes here</Product>
+    <Authors>De Imperative Banditter</Authors>
+    <Product>DIB</Product>
     <Description>Scrabble Bot for Functional Programming 2022
 
-Group name: &lt;Your group name goes here&gt; (optional since this is hosted in a public Github repository)</Description>
+Group name: &lt;De Imperative Banditter&gt; (optional since this is hosted in a public Github repository)</Description>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="MultiSet.fsi" />
@@ -24,7 +24,6 @@ Group name: &lt;Your group name goes here&gt; (optional since this is hosted in 
     <Compile Include="Parser.fsi" />
     <Compile Include="Parser.fs" />
     <Compile Include="Scrabble.fsi" />
-    <Compile Include="Scrabble.fs" />
     <Compile Include="Scrabble.fs" />
   </ItemGroup>
   <ItemGroup>
