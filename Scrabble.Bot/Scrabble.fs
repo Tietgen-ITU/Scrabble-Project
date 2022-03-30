@@ -1,4 +1,4 @@
-﻿namespace YourClientName
+﻿namespace DIB
 
 open ScrabbleUtil
 open ScrabbleUtil.ServerCommunication
