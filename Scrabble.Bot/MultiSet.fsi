@@ -1,4 +1,4 @@
-﻿module internal MultiSet
+﻿module MultiSet
     type MultiSet<'a when 'a: comparison> = Map<'a, uint32>
 
     val empty : MultiSet<'a>

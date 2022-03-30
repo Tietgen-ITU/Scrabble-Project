@@ -1,4 +1,4 @@
-﻿module internal MultiSet
+﻿module MultiSet
     open Microsoft.FSharp.Core.Operators.Checked
 
     type MultiSet<'a when 'a: comparison> = Map<'a, uint32>
