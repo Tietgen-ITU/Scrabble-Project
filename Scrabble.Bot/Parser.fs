@@ -44,6 +44,7 @@ module internal Parser
     let (>*>.) a b  = (a .>> spaces) >>. b
 
     let parenthesise p = pchar '(' >*>. p .>*> pchar ')' 
+    let brackethise p = pchar '{' >*>. p .>*> pchar '}'
 
     let pid = (pchar '_' <|> pletter) 
               .>>. many (palphanumeric <|> pchar '_') 
@@ -52,6 +53,10 @@ module internal Parser
     
     let unop a b = a >*>. b
     let binop op p1 p2 = p1 .>*> op .>*>. p2
+
+    let methodOp (method: Parser<'a>) (argParser: Parser<'b>) =
+        unop method (parenthesise argParser)
+        <?> "methodOp"
 
     let TermParse, tref = createParserForwardedToRef<aExp>()
     let ProdParse, pref = createParserForwardedToRef<aExp>()
@@ -87,9 +92,151 @@ module internal Parser
 
     let CexpParse = CharParse
 
-    let BexpParse = pstring "not implemented"
+    let ConjunctionParse, conref = createParserForwardedToRef<bExp> ()
+    let EqualityParse, eqref = createParserForwardedToRef<bExp> ()
+    let BMethodParse, bmref = createParserForwardedToRef<bExp> ()
 
-    let stmParse = pstring "not implemented"
+    let ConjParse =
+        binop (pstring "/\\") EqualityParse ConjunctionParse
+        |>> Conj
+        <?> "Conjunction"
+
+    let CreateDisj (a: bExp, b: bExp) = (Not a, Not b) |> Conj |> Not
+
+    let DisjParse =
+        binop (pstring "\\/") EqualityParse ConjunctionParse
+        |>> (fun x -> CreateDisj x)
+        <?> "Disjunction"
+
+    do
+        conref
+        := choice [ ConjParse
+                    DisjParse
+                    EqualityParse ]
+
+    let AEqParse =
+        binop (pchar '=') AexpParse AexpParse |>> AEq
+        <?> "Equal"
+
+    let ANEqParse =
+        binop (pstring "<>") AexpParse AexpParse
+        |>> (fun x -> x |> AEq |> Not)
+        <?> "NotEqual"
+
+    let ALtParse =
+        binop (pchar '<') AexpParse AexpParse |>> ALt
+        <?> "LessThan"
+
+    // This works, but it's as cursed as it gets
+    let ALtOrEqParse =
+        binop (pstring "<=") AexpParse AexpParse
+        |>> (fun x -> (ALt x, AEq x |> Not |> Not) |> CreateDisj)
+        <?> "LessThanOrEqual"
+
+    let AGtParse =
+        binop (pchar '>') AexpParse AexpParse
+        |>> (fun x -> (AEq x |> Not, ALt x |> Not) |> Conj)
+        <?> "GreaterThan"
+
+    let AGtOrEqParse =
+        binop (pstring ">=") AexpParse AexpParse
+        |>> (fun x -> ALt x |> Not)
+        <?> "GreaterThanOrEqual"
+
+
+    do
+        eqref
+        := choice [ AEqParse
+                    ANEqParse
+                    ALtParse
+                    ALtOrEqParse
+                    AGtParse
+                    AGtOrEqParse
+                    BMethodParse ]
+
+    let NotParse =
+        pchar '~' >>. ConjunctionParse |>> Not <?> "Not"
+
+    let IsDigitParse =
+        methodOp pIsDigit CexpParse |>> IsDigit
+        <?> "IsDigit"
+
+    let IsLetterParser =
+        methodOp pIsDigit CexpParse |>> IsLetter
+        <?> "IsLetter"
+
+    let IsVowellParse =
+        methodOp pIsDigit CexpParse |>> IsVowel
+        <?> "IsVowel"
+
+    let TTParse = pTrue |>> (fun _ -> TT) <?> "True"
+    let FFParse = pFalse |>> (fun _ -> FF) <?> "False"
+
+    let ParBParse =
+        parenthesise ConjunctionParse <?> "BParentheses"
+
+    do
+        bmref
+        := choice [ NotParse
+                    IsDigitParse
+                    IsLetterParser
+                    IsVowellParse
+                    TTParse
+                    FFParse
+                    ParBParse ]
+
+    let BexpParse = ConjunctionParse
+
+    let TopLevelParser, tsref = createParserForwardedToRef<stm> ()
+    let StatementParser, sref = createParserForwardedToRef<stm> ()
+
+    let SemicolonParser =
+        StatementParser .>*> pchar ';'
+        .>*>. TopLevelParser
+        |>> Seq
+        <?> "Semicolon"
+
+    do
+        tsref
+        := choice [ SemicolonParser
+                    StatementParser ]
+
+    let AssignParser =
+        pid .>*> pstring ":=" .>*>. AexpParse |>> Ass
+        <?> "Assign"
+
+    let DeclareParser =
+        pdeclare >>. spaces1 >>. pid |>> Declare
+        <?> "Declare"
+
+    let getIf =
+        methodOp pif BexpParse .>*> pthen
+        .>*>. brackethise StatementParser
+
+    let IfParser =
+        getIf |>> (fun (b, s1) -> ITE(b, s1, Skip))
+        <?> "If"
+
+    let IfElseParser =
+        getIf .>*> pelse .>*>. brackethise StatementParser
+        |>> (fun ((b, s1), s2) -> ITE(b, s1, s2))
+        <?> "IfElse"
+
+    let WhileParser =
+        methodOp pwhile BexpParse .>*> pdo
+        .>*>. brackethise StatementParser
+        |>> While
+        <?> "While"
+
+    do
+        sref
+        := choice [ AssignParser
+                    DeclareParser
+                    IfElseParser
+                    IfParser
+                    WhileParser ]
+
+    let stmntParse = TopLevelParser
 
     (* The rest of your parser goes here *)
 
@@ -107,5 +254,16 @@ module internal Parser
         squares       : boardFun
     }
 
-    let parseBoardProg (bp : boardProg) : board = failwith "not implemented"
+    let parseSquareProg (sqp: squareProg) : square =
+        Map.map
+            (fun _ v ->
+                v
+                |> run stmntParse
+                |> getSuccess
+                |> stmntToSquareFun)
+            sqp
 
+    let parseBoardProg (b:boardProg) : board =
+        run stmntParse b.prog
+        |> getSuccess
+        |> (fun x -> stmntToBoardFun x b.squares)
