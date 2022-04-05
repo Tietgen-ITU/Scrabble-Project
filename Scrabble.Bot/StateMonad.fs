@@ -48,13 +48,19 @@ module internal StateMonad
     let push : SM<unit> = 
         S (fun s -> Success ((), {s with vars = Map.empty :: s.vars}))
 
-    let pop : SM<unit> = failwith "Not implemented"      
+    let removeFirst = function
+        | [] -> []
+        | _::ms -> ms
 
-    let wordLength : SM<int> = failwith "Not implemented"      
+    let pop : SM<unit> = S (fun s -> Success ((), {s with vars = removeFirst (s.vars)}))      
 
-    let characterValue (pos : int) : SM<char> = failwith "Not implemented"      
+    let wordLength : SM<int> = S (fun s -> Success (s.word.Length, s))      
 
-    let pointValue (pos : int) : SM<int> = failwith "Not implemented"      
+    let characterValue (pos : int) : SM<char> = wordLength >>= (fun i -> if pos < i then S (fun s -> Success (fst (s.word.[pos]), s)) 
+                                                                         else fail (IndexOutOfBounds pos))      
+
+    let pointValue (pos : int) : SM<int> = wordLength >>= (fun i -> if pos < i && pos > -1 then S (fun s -> Success (snd (s.word.[pos]), s)) 
+                                                                    else fail (IndexOutOfBounds pos))      
 
     let lookup (x : string) : SM<int> = 
         let rec aux =
@@ -70,5 +76,18 @@ module internal StateMonad
               | Some v -> Success (v, s)
               | None   -> Failure (VarNotFound x))
 
-    let declare (var : string) : SM<unit> = failwith "Not implemented"   
-    let update (var : string) (value : int) : SM<unit> = failwith "Not implemented"      
+    let declare (var : string) : SM<unit> = 
+        let aux = function
+            | [] -> None
+            | m :: _ -> Map.tryFind var m 
+
+        S (fun s -> match aux s.vars with 
+                    | Some v -> Failure (VarExists var)
+                    | None -> if s.reserved.Contains var then Failure (ReservedName var) else Success((),{s with vars = List.mapi (fun i a -> if i=0 then Map.add var 0 (s.vars.Item (0)) else a) s.vars})
+        )   
+    
+    let update (var : string) (value : int) : SM<unit> = 
+    S (fun s ->
+                match List.tryFindIndex (fun t -> Map.containsKey var t) s.vars with
+                | Some i -> Success((),{s with vars = List.mapi (fun ind a -> if ind=i then Map.add var value (s.vars.Item (i)) else a) s.vars})
+                | None -> Failure (VarNotFound var))      
