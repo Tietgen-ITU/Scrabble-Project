@@ -21,6 +21,17 @@ jobs:
       with:
         dotnet-version: '6.0.x'
         include-prerelease: true
+
+    - name: Add jesper-bengtson nuget source
+      run: |
+        dotnet nuget add source https://nuget.pkg.github.com/jesper-bengtson/index.json \
+          -n FP2022 \
+          --username $NUGET_USERNAME \
+          --password $NUGET_PASSWORD \
+          --store-password-in-clear-text
+      env:
+        NUGET_USERNAME: ${{ secrets.NUGET_USERNAME }}
+        NUGET_PASSWORD: ${{ secrets.NUGET_PASSWORD }}
     
     - name: Restore dependencies
       run: dotnet restore
