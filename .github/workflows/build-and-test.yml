@@ -1,0 +1,43 @@
+name: .NET
+
+on:
+  push:
+    branches: 
+      - master
+  pull_request:
+    branches: 
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout pr
+      uses: actions/checkout@v3
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v2
+      with:
+        dotnet-version: '6.0.x'
+        include-prerelease: true
+
+    - name: Add jesper-bengtson nuget source
+      run: |
+        dotnet nuget add source https://nuget.pkg.github.com/jesper-bengtson/index.json \
+          -n FP2022 \
+          --username $NUGET_USERNAME \
+          --password $NUGET_PASSWORD \
+          --store-password-in-clear-text
+      env:
+        NUGET_USERNAME: ${{ secrets.NUGET_USERNAME }}
+        NUGET_PASSWORD: ${{ secrets.NUGET_PASSWORD }}
+    
+    - name: Restore dependencies
+      run: dotnet restore
+    
+    - name: Build
+      run: dotnet build --no-restore
+    
+    - name: Test
+      run: dotnet test --no-build --verbosity normal
