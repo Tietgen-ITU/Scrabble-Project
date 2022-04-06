@@ -142,7 +142,6 @@ let rec boolEval b : SM<bool> =
         charEval c
         >>= fun a -> ret (System.Char.IsDigit a)
 
-
 type stm =
     (* statements *)
     | Declare of string (* variable declaration *)
@@ -172,7 +171,6 @@ let rec stmntEval stmnt : SM<unit> =
                     ret ()
 
 (* Part 3 (Optional) *)
-
 type StateBuilder() =
 
     member this.Bind(f, x) = f >>= x
@@ -304,25 +302,21 @@ let rec stmntEval2 stm =
         }
 
 (* Part 4 *)
-
 type word = (char * int) list
 type squareFun = word -> int -> int -> Result<int, Error>
 
-let stmntToSquareFun stm : squareFun =
-    fun word pos acc ->
-        prog {
-            let state =
-                mkState
-                    [ ("_pos_", pos)
-                      ("_acc_", acc)
-                      ("_result_", 0) ]
-                    word
-                    [ "_pos_"; "_acc_"; "_result_" ]
+let stmntToSquareFun stm =
+    fun w pos acc ->
+        let state =
+            mkState
+                [ ("_pos_", pos)
+                  ("_acc_", acc)
+                  ("_result_", 0) ]
+                w
+                [ "_pos_"; "_acc_"; "_result_" ]
 
-            return!
-                stmntEval2 stm >>>= lookup "_result_"
-                |> evalSM state
-        }
+        stmntEval stm >>>= lookup "_result_"
+        |> evalSM state
 
 
 type coord = int * int
