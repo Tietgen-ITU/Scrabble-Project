@@ -51,6 +51,7 @@ module State =
     }
 
     let mkState b d pn h pl pt = {board = b; dict = d;  playerNumber = pn; hand = h; players = pl; playerTurn = pt}
+    let removePlayer st player = st.players.Remove player
 
     let board st         = st.board
     let dict st          = st.dict
