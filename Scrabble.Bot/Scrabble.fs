@@ -46,14 +46,18 @@ module State =
         dict          : ScrabbleUtil.Dictionary.Dict
         playerNumber  : uint32
         hand          : MultiSet.MultiSet<uint32>
+        players       : Set<uint32>
+        playerTurn    : uint32
     }
 
-    let mkState b d pn h = {board = b; dict = d;  playerNumber = pn; hand = h }
+    let mkState b d pn h pl pt = {board = b; dict = d;  playerNumber = pn; hand = h; players = pl; playerTurn = pt}
 
     let board st         = st.board
     let dict st          = st.dict
     let playerNumber st  = st.playerNumber
     let hand st          = st.hand
+    let players st       = st.players
+    let playerTurn st    = st.playerTurn
 
 module Scrabble =
     open System.Threading
@@ -115,8 +119,12 @@ module Scrabble =
         //let dict = dictf true // Uncomment if using a gaddag for your dictionary
         let dict = dictf false // Uncomment if using a trie for your dictionary
         let board = Parser.parseBoardProg boardP
+
+        let currentPlayerTurn = playerTurn
+
+        let players = Set.ofList [uint32(1).. numPlayers]
                   
         let handSet = List.fold (fun acc (x, k) -> MultiSet.add x k acc) MultiSet.empty hand
 
-        fun () -> playGame cstream tiles (State.mkState board dict playerNumber handSet)
+        fun () -> playGame cstream tiles (State.mkState board dict playerNumber handSet players currentPlayerTurn)
         
