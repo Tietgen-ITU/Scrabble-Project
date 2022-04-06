@@ -28,9 +28,13 @@ Group name: &lt;De Imperative Banditter&gt; (optional since this is hosted in a 
     <Compile Include="Scrabble.fsi" />
     <Compile Include="Scrabble.fs" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="../Scrabble.Dependencies/ScrabbleUtil.dll" />
+ </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="FParsec" Version="1.1.1" />
-    <PackageReference Include="ScrabbleUtil" Version="1.0.12" />
     <PackageReference Update="FSharp.Core" Version="6.0.3" />
   </ItemGroup>
 </Project>

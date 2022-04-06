@@ -7,11 +7,18 @@
     <Content Include="Dictionaries\English.txt" />
     <Compile Include="Program.fs" />
   </ItemGroup>
+
   <ItemGroup>
-    <PackageReference Include="Oxyphenbutazone" Version="1.0.11" />
-    <PackageReference Include="ScrabbleServer" Version="1.0.19" />
+    <Reference Include="../Scrabble.Dependencies/ScrabbleUtil.dll" />
+    <Reference Include="../Scrabble.Dependencies/ScrabbleServer.dll" />
+    <Reference Include="../Scrabble.Dependencies/Oxyphenbutazone.dll" />
+ </ItemGroup>
+
+
+  <ItemGroup>
     <PackageReference Update="FSharp.Core" Version="6.0.3" />
   </ItemGroup>
+  
   <ItemGroup>
     <ProjectReference Include="..\Scrabble.Bot\Scrabble.Bot.fsproj" />
   </ItemGroup>
