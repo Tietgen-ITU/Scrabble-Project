@@ -60,6 +60,10 @@ module State =
     let playerNumber st = st.playerNumber
     let hand st = st.hand
 
+    let removeTileFromHand st tileId = {st with hand = st.hand.Remove tileId}
+
+    let addTileToHand st tileId value = {st with hand = st.hand.Add (tileId, value) }
+
 module Scrabble =
     open System.Threading
 
