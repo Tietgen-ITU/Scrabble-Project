@@ -67,6 +67,8 @@ module State =
     (* 
         Updates the board with the function provided. This is created as there are a lot of different
         functions that both parses the board and does other stuff. So this is created as a more general purpose.
+
+        NOTE: We could hide this function and create more specific functions if we want to.
     *)
     let updateBoard f st = { st with board = f st.board }
 
