@@ -86,15 +86,15 @@ module Scrabble =
             match msg with
             | RCM (CMPlaySuccess (ms, points, newPieces)) ->
                 (* Successful play by you. Update your state (remove old tiles, add the new ones, change turn, etc) *)
-                let st' = st // This state needs to be updated
+                let st' = State.mkState st.board st.dict st.playerNumber st.hand st.players st.playerNumber // This state needs to be updated
                 aux st'
             | RCM (CMPlayed (pid, ms, points)) ->
                 (* Successful play by other player. Update your state *)
-                let st' = st // This state needs to be updated
+                let st' = State.mkState st.board st.dict st.playerNumber st.hand st.players pid // This state needs to be updated
                 aux st'
             | RCM (CMPlayFailed (pid, ms)) ->
                 (* Failed play. Update your state *)
-                let st' = st // This state needs to be updated
+                let st' = State.mkState st.board st.dict st.playerNumber st.hand st.players pid // This state needs to be updated
                 aux st'
             | RCM (CMGameOver _) -> ()
             | RCM a -> failwith (sprintf "not implmented: %A" a)
