@@ -62,6 +62,18 @@ module State =
     let players st       = st.players
     let playerTurn st    = st.playerTurn
 
+    let removeTileFromHand st tileId = {st with hand = st.hand.Remove tileId }
+
+    let addTileToHand st tileId value = {st with hand = st.hand.Add (tileId, value) }
+
+    (* 
+        Updates the board with the function provided. This is created as there are a lot of different
+        functions that both parses the board and does other stuff. So this is created as a more general purpose.
+
+        NOTE: We could hide this function and create more specific functions if we want to.
+    *)
+    let updateBoard f st = { st with board = f st.board }
+
 module Scrabble =
     open System.Threading
 
@@ -137,8 +149,8 @@ module Scrabble =
                 timeout
         )
 
-        //let dict = dictf true // Uncomment if using a gaddag for your dictionary
-        let dict = dictf false // Uncomment if using a trie for your dictionary
+        let dict = dictf true // Uncomment if using a gaddag for your dictionary
+        //let dict = dictf false // Uncomment if using a trie for your dictionary
         let board = Parser.mkBoard boardP
 
         let players = Array.create ((int) numPlayers) true 
