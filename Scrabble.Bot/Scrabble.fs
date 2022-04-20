@@ -48,12 +48,12 @@ module State =
         dict          : ScrabbleUtil.Dictionary.Dict
         playerNumber  : uint32
         hand          : MultiSet.MultiSet<uint32>
-        players       : Set<uint32>
+        players       : array<bool>
         playerTurn    : uint32
     }
 
     let mkState b d pn h pl pt = {board = b; dict = d;  playerNumber = pn; hand = h; players = pl; playerTurn = pt}
-    let removePlayer st player = st.players.Remove player
+    let removePlayer st player = st.players[player-1] <- false
 
     let board st         = st.board
     let dict st          = st.dict
@@ -137,7 +137,7 @@ module Scrabble =
 
         let currentPlayerTurn = playerTurn
 
-        let players = Set.ofList [uint32(1).. numPlayers]
+        let players = Array.create ((int) numPlayers) true 
                   
         let handSet = List.fold (fun acc (x, k) -> MultiSet.add x k acc) MultiSet.empty hand
 
