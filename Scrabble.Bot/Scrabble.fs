@@ -65,6 +65,12 @@ module State =
 module Scrabble =
     open System.Threading
 
+    let playerIsActive (st:State.state) player = if st.players[player-1] = true then true else false
+    let rec changeTurn (st:State.state) player = 
+        match player >= uint32 st.players.Length with
+        | true -> if playerIsActive st 1 then 1u else changeTurn st 1u
+        | false -> if playerIsActive st (int player+1) then player+1u else changeTurn st player+1u      
+
     let playGame cstream pieces (st: State.state) =
 
         let rec aux (st: State.state) =
@@ -86,15 +92,15 @@ module Scrabble =
             match msg with
             | RCM (CMPlaySuccess (ms, points, newPieces)) ->
                 (* Successful play by you. Update your state (remove old tiles, add the new ones, change turn, etc) *)
-                let st' = State.mkState st.board st.dict st.playerNumber st.hand st.players st.playerNumber // This state needs to be updated
+                let st' = State.mkState st.board st.dict st.playerNumber st.hand st.players (changeTurn st st.playerNumber)  // This state needs to be updated
                 aux st'
             | RCM (CMPlayed (pid, ms, points)) ->
                 (* Successful play by other player. Update your state *)
-                let st' = State.mkState st.board st.dict st.playerNumber st.hand st.players pid // This state needs to be updated
+                let st' = State.mkState st.board st.dict st.playerNumber st.hand st.players (changeTurn st pid) // This state needs to be updated
                 aux st'
             | RCM (CMPlayFailed (pid, ms)) ->
                 (* Failed play. Update your state *)
-                let st' = State.mkState st.board st.dict st.playerNumber st.hand st.players pid // This state needs to be updated
+                let st' = State.mkState st.board st.dict st.playerNumber st.hand st.players (changeTurn st pid) // This state needs to be updated
                 aux st'
             | RCM (CMGameOver _) -> ()
             | RCM a -> failwith (sprintf "not implmented: %A" a)
@@ -135,11 +141,9 @@ module Scrabble =
         let dict = dictf false // Uncomment if using a trie for your dictionary
         let board = Parser.mkBoard boardP
 
-        let currentPlayerTurn = playerTurn
-
         let players = Array.create ((int) numPlayers) true 
                   
         let handSet = List.fold (fun acc (x, k) -> MultiSet.add x k acc) MultiSet.empty hand
 
-        fun () -> playGame cstream tiles (State.mkState board dict playerNumber handSet players currentPlayerTurn)
+        fun () -> playGame cstream tiles (State.mkState board dict playerNumber handSet players playerTurn)
         
