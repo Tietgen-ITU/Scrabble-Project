@@ -46,18 +46,18 @@ module State =
     type state = {
         board         : Parser.board
         dict          : ScrabbleUtil.Dictionary.Dict
-        playerNumber  : uint32
+        playerId  : uint32
         hand          : MultiSet.MultiSet<uint32>
         players       : array<bool>
         playerTurn    : uint32
     }
 
-    let mkState b d pn h pl pt = {board = b; dict = d;  playerNumber = pn; hand = h; players = pl; playerTurn = pt}
+    let mkState b d pn h pl pt = {board = b; dict = d;  playerId = pn; hand = h; players = pl; playerTurn = pt}
     let removePlayer st player = st.players[player-1] <- false
 
     let board st         = st.board
     let dict st          = st.dict
-    let playerNumber st  = st.playerNumber
+    let playerId st             = st.playerId
     let hand st          = st.hand
     let players st       = st.players
     let playerTurn st    = st.playerTurn
@@ -95,24 +95,24 @@ module Scrabble =
             let input = System.Console.ReadLine()
             let move = RegEx.parseMove input
 
-            debugPrint (sprintf "Player %d -> Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
+            debugPrint (sprintf "Player %d -> Server:\n%A\n" (State.playerId st) move) // keep the debug lines. They are useful.
             send cstream (SMPlay move)
 
             let msg = recv cstream
-            debugPrint (sprintf "Player %d <- Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
+            debugPrint (sprintf "Player %d <- Server:\n%A\n" (State.playerId st) move) // keep the debug lines. They are useful.
 
             match msg with
             | RCM (CMPlaySuccess (ms, points, newPieces)) ->
                 (* Successful play by you. Update your state (remove old tiles, add the new ones, change turn, etc) *)
-                let st' = State.mkState st.board st.dict st.playerNumber st.hand st.players (changeTurn st st.playerNumber)  // This state needs to be updated
+                let st' = State.mkState st.board st.dict st.playerId st.hand st.players (changeTurn st st.playerId)  // This state needs to be updated
                 aux st'
             | RCM (CMPlayed (pid, ms, points)) ->
                 (* Successful play by other player. Update your state *)
-                let st' = State.mkState st.board st.dict st.playerNumber st.hand st.players (changeTurn st pid) // This state needs to be updated
+                let st' = State.mkState st.board st.dict st.playerId st.hand st.players (changeTurn st pid) // This state needs to be updated
                 aux st'
             | RCM (CMPlayFailed (pid, ms)) ->
                 (* Failed play. Update your state *)
-                let st' = State.mkState st.board st.dict st.playerNumber st.hand st.players (changeTurn st pid) // This state needs to be updated
+                let st' = State.mkState st.board st.dict st.playerId st.hand st.players (changeTurn st pid) // This state needs to be updated
                 aux st'
             | RCM (CMGameOver _) -> ()
             | RCM a -> failwith (sprintf "not implmented: %A" a)
@@ -127,7 +127,7 @@ module Scrabble =
         (boardP: boardProg)
         (dictf: bool -> Dictionary.Dict)
         (numPlayers: uint32)
-        (playerNumber: uint32)
+        (playerId: uint32)
         (playerTurn: uint32)
         (hand: (uint32 * uint32) list)
         (tiles: Map<uint32, tile>)
@@ -143,7 +143,7 @@ module Scrabble =
                       hand =  %A
                       timeout = %A\n\n"
                 numPlayers
-                playerNumber
+                playerId
                 playerTurn
                 hand
                 timeout
@@ -157,5 +157,5 @@ module Scrabble =
                   
         let handSet = List.fold (fun acc (x, k) -> MultiSet.add x k acc) MultiSet.empty hand
 
-        fun () -> playGame cstream tiles (State.mkState board dict playerNumber handSet players playerTurn)
+        fun () -> playGame cstream tiles (State.mkState board dict  playerId handSet players playerTurn)
         
