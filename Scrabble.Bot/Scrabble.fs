@@ -46,18 +46,18 @@ module State =
     type state = {
         board         : Parser.board
         dict          : ScrabbleUtil.Dictionary.Dict
-        playerId  : uint32
+        playerId      : uint32
         hand          : MultiSet.MultiSet<uint32>
-        players       : array<bool>
+        players       : List<bool>
         playerTurn    : uint32
     }
 
     let mkState b d pn h pl pt = {board = b; dict = d;  playerId = pn; hand = h; players = pl; playerTurn = pt}
-    let removePlayer st player = st.players[player-1] <- false
+    let removePlayer st playerIdToRemove = {st with players = List.updateAt (playerIdToRemove-1) false st.players}
 
     let board st         = st.board
     let dict st          = st.dict
-    let playerId st             = st.playerId
+    let playerId st      = st.playerId
     let hand st          = st.hand
     let players st       = st.players
     let playerTurn st    = st.playerTurn
@@ -74,11 +74,12 @@ module State =
     *)
     let updateBoard f st = { st with board = f st.board }
 
-    let playerIsActive (st:state) player = if st.players[player-1] = true then true else false
-    let rec changeTurn (st:state) player = 
-        match player >= uint32 st.players.Length with
-        | true -> if playerIsActive st 1 then 1u else changeTurn st 1u
-        | false -> if playerIsActive st (int player+1) then player+1u else changeTurn st player+1u 
+    let playerIsActive (st:state) = st.players.Item (int st.playerTurn-1)
+
+    let rec changeTurn (st:state) = 
+        match st.playerTurn >= uint32 st.players.Length with
+        | true -> if playerIsActive {st with playerTurn = 1u} then {st with playerTurn = 1u} else changeTurn {st with playerTurn = 1u}
+        | false -> if playerIsActive{st with playerTurn = (st.playerTurn+1u)} then {st with playerTurn = (st.playerTurn+1u)} else changeTurn {st with playerTurn = (st.playerTurn+1u)}
 
 module Scrabble =
     open System.Threading     
@@ -104,15 +105,15 @@ module Scrabble =
             match msg with
             | RCM (CMPlaySuccess (ms, points, newPieces)) ->
                 (* Successful play by you. Update your state (remove old tiles, add the new ones, change turn, etc) *)
-                let st' = State.mkState st.board st.dict st.playerId st.hand st.players (State.changeTurn st st.playerId)  // This state needs to be updated
+                let st' = State.mkState st.board st.dict st.playerId st.hand st.players st.playerTurn  // This state needs to be updated
                 aux st'
             | RCM (CMPlayed (pid, ms, points)) ->
                 (* Successful play by other player. Update your state *)
-                let st' = State.mkState st.board st.dict st.playerId st.hand st.players (State.changeTurn st pid) // This state needs to be updated
+                let st' = State.mkState st.board st.dict st.playerId st.hand st.players pid // This state needs to be updated
                 aux st'
             | RCM (CMPlayFailed (pid, ms)) ->
                 (* Failed play. Update your state *)
-                let st' = State.mkState st.board st.dict st.playerId st.hand st.players (State.changeTurn st pid) // This state needs to be updated
+                let st' = State.mkState st.board st.dict st.playerId st.hand st.players pid // This state needs to be updated
                 aux st'
             | RCM (CMGameOver _) -> ()
             | RCM a -> failwith (sprintf "not implmented: %A" a)
@@ -153,7 +154,7 @@ module Scrabble =
         //let dict = dictf false // Uncomment if using a trie for your dictionary
         let board = Parser.mkBoard boardP
 
-        let players = Array.create ((int) numPlayers) true 
+        let players = [for i in 0.. int numPlayers-1 -> true]
                   
         let handSet = List.fold (fun acc (x, k) -> MultiSet.add x k acc) MultiSet.empty hand
 
