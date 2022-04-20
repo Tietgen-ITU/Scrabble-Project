@@ -43,22 +43,24 @@ module State =
     // but it could, potentially, keep track of other useful
     // information, such as number of players, player turn, etc.
 
-    type state =
-        { board: Parser.board
-          dict: ScrabbleUtil.Dictionary.Dict
-          playerNumber: uint32
-          hand: MultiSet.MultiSet<uint32> }
+    type state = {
+        board         : Parser.board
+        dict          : ScrabbleUtil.Dictionary.Dict
+        playerNumber  : uint32
+        hand          : MultiSet.MultiSet<uint32>
+        players       : Set<uint32>
+        playerTurn    : uint32
+    }
 
-    let mkState b d pn h =
-        { board = b
-          dict = d
-          playerNumber = pn
-          hand = h }
+    let mkState b d pn h pl pt = {board = b; dict = d;  playerNumber = pn; hand = h; players = pl; playerTurn = pt}
+    let removePlayer st player = st.players.Remove player
 
-    let board st = st.board
-    let dict st = st.dict
-    let playerNumber st = st.playerNumber
-    let hand st = st.hand
+    let board st         = st.board
+    let dict st          = st.dict
+    let playerNumber st  = st.playerNumber
+    let hand st          = st.hand
+    let players st       = st.players
+    let playerTurn st    = st.playerTurn
 
     let removeTileFromHand st tileId = {st with hand = st.hand.Remove tileId }
 
@@ -96,15 +98,15 @@ module Scrabble =
             match msg with
             | RCM (CMPlaySuccess (ms, points, newPieces)) ->
                 (* Successful play by you. Update your state (remove old tiles, add the new ones, change turn, etc) *)
-                let st' = st // This state needs to be updated
+                let st' = State.mkState st.board st.dict st.playerNumber st.hand st.players st.playerNumber // This state needs to be updated
                 aux st'
             | RCM (CMPlayed (pid, ms, points)) ->
                 (* Successful play by other player. Update your state *)
-                let st' = st // This state needs to be updated
+                let st' = State.mkState st.board st.dict st.playerNumber st.hand st.players pid // This state needs to be updated
                 aux st'
             | RCM (CMPlayFailed (pid, ms)) ->
                 (* Failed play. Update your state *)
-                let st' = st // This state needs to be updated
+                let st' = State.mkState st.board st.dict st.playerNumber st.hand st.players pid // This state needs to be updated
                 aux st'
             | RCM (CMGameOver _) -> ()
             | RCM a -> failwith (sprintf "not implmented: %A" a)
@@ -145,6 +147,11 @@ module Scrabble =
         let dict = dictf false // Uncomment if using a trie for your dictionary
         let board = Parser.mkBoard boardP
 
+        let currentPlayerTurn = playerTurn
+
+        let players = Set.ofList [uint32(1).. numPlayers]
+                  
         let handSet = List.fold (fun acc (x, k) -> MultiSet.add x k acc) MultiSet.empty hand
 
-        fun () -> playGame cstream tiles (State.mkState board dict playerNumber handSet)
+        fun () -> playGame cstream tiles (State.mkState board dict playerNumber handSet players currentPlayerTurn)
+        
