@@ -45,14 +45,15 @@ module State =
 
     type state = {
         board         : Parser.board
-        dict          : ScrabbleUtil.Dictionary.Dict
+        dict          : Dictionary.Dict
         playerId      : uint32
         hand          : MultiSet.MultiSet<uint32>
         players       : List<bool>
         playerTurn    : uint32
+        tilePlacement : Map<coord, (char * uint32)>
     }
 
-    let mkState b d pn h pl pt = {board = b; dict = d;  playerId = pn; hand = h; players = pl; playerTurn = pt}
+    let mkState b d pn h pl pt = {board = b; dict = d;  playerId = pn; hand = h; players = pl; playerTurn = pt; tilePlacement = Map.empty<coord, (char * uint32)>}
     let removePlayer st playerIdToRemove = {st with players = List.updateAt (playerIdToRemove-1) false st.players}
 
     let board st         = st.board
@@ -65,6 +66,14 @@ module State =
     let removeTileFromHand st tileId = {st with hand = st.hand.Remove tileId }
 
     let addTileToHand st tileId value = {st with hand = st.hand.Add (tileId, value) }
+
+    let private (|FoundValue|_|) key map =
+        Map.tryFind key map
+
+    let placeLetter (tile: (char * uint32)) (st: state) (coordinate: coord) = 
+        match st.tilePlacement with 
+        | FoundValue coordinate _ -> failwith "There is already a tile placed at that coordinate"
+        | _ -> {st with tilePlacement = Map.add coordinate tile st.tilePlacement }
 
     (* 
         Updates the board with the function provided. This is created as there are a lot of different
