@@ -74,14 +74,14 @@ module State =
     *)
     let updateBoard f st = { st with board = f st.board }
 
-module Scrabble =
-    open System.Threading
-
-    let playerIsActive (st:State.state) player = if st.players[player-1] = true then true else false
-    let rec changeTurn (st:State.state) player = 
+    let playerIsActive (st:state) player = if st.players[player-1] = true then true else false
+    let rec changeTurn (st:state) player = 
         match player >= uint32 st.players.Length with
         | true -> if playerIsActive st 1 then 1u else changeTurn st 1u
-        | false -> if playerIsActive st (int player+1) then player+1u else changeTurn st player+1u      
+        | false -> if playerIsActive st (int player+1) then player+1u else changeTurn st player+1u 
+
+module Scrabble =
+    open System.Threading     
 
     let playGame cstream pieces (st: State.state) =
 
@@ -104,15 +104,15 @@ module Scrabble =
             match msg with
             | RCM (CMPlaySuccess (ms, points, newPieces)) ->
                 (* Successful play by you. Update your state (remove old tiles, add the new ones, change turn, etc) *)
-                let st' = State.mkState st.board st.dict st.playerId st.hand st.players (changeTurn st st.playerId)  // This state needs to be updated
+                let st' = State.mkState st.board st.dict st.playerId st.hand st.players (State.changeTurn st st.playerId)  // This state needs to be updated
                 aux st'
             | RCM (CMPlayed (pid, ms, points)) ->
                 (* Successful play by other player. Update your state *)
-                let st' = State.mkState st.board st.dict st.playerId st.hand st.players (changeTurn st pid) // This state needs to be updated
+                let st' = State.mkState st.board st.dict st.playerId st.hand st.players (State.changeTurn st pid) // This state needs to be updated
                 aux st'
             | RCM (CMPlayFailed (pid, ms)) ->
                 (* Failed play. Update your state *)
-                let st' = State.mkState st.board st.dict st.playerId st.hand st.players (changeTurn st pid) // This state needs to be updated
+                let st' = State.mkState st.board st.dict st.playerId st.hand st.players (State.changeTurn st pid) // This state needs to be updated
                 aux st'
             | RCM (CMGameOver _) -> ()
             | RCM a -> failwith (sprintf "not implmented: %A" a)
