@@ -109,7 +109,7 @@ module Scrabble =
                 aux st'
             | RCM (CMPlayed (pid, ms, points)) ->
                 (* Successful play by other player. Update your state *)
-                let st' = State.mkState st.board st.dict st.playerId st.hand st.players pid // This state needs to be updated
+                let st' = st |> State.updateBoard id |> State.changeTurn 
                 aux st'
             | RCM (CMPlayFailed (pid, ms)) ->
                 (* Failed play. Update your state *)
