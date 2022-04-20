@@ -64,7 +64,7 @@ module State =
 
     let removeTileFromHand st tileId = {st with hand = st.hand.Remove tileId }
 
-    let addTileToHand st tileId value = {st with hand = st.hand.Add (tileId, value) }
+    let addTileToHand st tile = {st with hand = st.hand.Add tile }
 
     (* 
         Updates the board with the function provided. This is created as there are a lot of different
@@ -105,7 +105,7 @@ module Scrabble =
             match msg with
             | RCM (CMPlaySuccess (ms, points, newPieces)) ->
                 (* Successful play by you. Update your state (remove old tiles, add the new ones, change turn, etc) *)
-                let st' = State.mkState st.board st.dict st.playerId st.hand st.players st.playerTurn  // This state needs to be updated
+                let st' = List.fold (fun acc s -> State.addTileToHand acc s) st newPieces |> State.changeTurn   // This state needs to be updated
                 aux st'
             | RCM (CMPlayed (pid, ms, points)) ->
                 (* Successful play by other player. Update your state *)
