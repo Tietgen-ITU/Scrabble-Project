@@ -47,13 +47,14 @@ module State =
         board         : Parser.board
         dict          : Dictionary.Dict
         playerId      : uint32
+        points        : int
         hand          : MultiSet.MultiSet<uint32>
         players       : List<bool>
         playerTurn    : uint32
         tilePlacement : Map<coord, (char * int)>
     }
 
-    let mkState b d pn h pl pt = {board = b; dict = d;  playerId = pn; hand = h; players = pl; playerTurn = pt; tilePlacement = Map.empty<coord, (char * int)>}
+    let mkState b d pn h pl pt = {board = b; dict = d;  playerId = pn; hand = h; players = pl; playerTurn = pt; tilePlacement = Map.empty<coord, (char * int)>; points = 0}
     let removePlayer st playerIdToRemove = {st with players = List.updateAt (playerIdToRemove-1) false st.players}
 
     let board st         = st.board
@@ -66,6 +67,11 @@ module State =
     let removeTileFromHand st tileId = {st with hand = st.hand.Remove tileId }
 
     let addTileToHand st tileId value = {st with hand = st.hand.Add (tileId, value) }
+
+    let addPoints playerId points st = 
+        if st.playerId = playerId then
+            {st with points = st.points + points}
+        else st
 
     let private (|FoundValue|_|) key map =
         Map.tryFind key map
@@ -127,7 +133,11 @@ module Scrabble =
             | RCM (CMPlayed (pid, ms, points)) ->
                 (* Successful play by other player. Update your state *)
                 let placedTiles = List.map (fun (coord, (_ , tile)) -> (coord, tile)) ms
-                let st' = st |> State.placeLetters (Seq.ofList placedTiles) |> State.changeTurn 
+                let st' = st 
+                                    |> State.placeLetters (Seq.ofList placedTiles) 
+                                    |> State.addPoints pid points
+                                    |> State.changeTurn
+                                     
                 aux st'
             | RCM (CMPlayFailed (pid, ms)) ->
                 (* Failed play. Update your state *)
