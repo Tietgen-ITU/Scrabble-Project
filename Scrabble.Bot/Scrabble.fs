@@ -139,11 +139,11 @@ module Scrabble =
                                     |> State.changeTurn
 
                 aux st'
-            | RCM (CMPlayFailed (pid, ms)) ->
-                (* Failed play. Update your state *)
+            | RCM (CMGameOver _) -> ()
+            | RCM (CMPassed _) | RCM (CMTimeout _) | RCM (CMPlayFailed _) -> 
+                (*The player failed to make a move.. let the next player have the turn*)
                 let st' = State.changeTurn st
                 aux st'
-            | RCM (CMGameOver _) -> ()
             | RCM a -> failwith (sprintf "not implmented: %A" a)
             | RGPE err ->
                 printfn "Gameplay Error:\n%A" err
