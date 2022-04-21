@@ -1,4 +1,4 @@
-﻿namespace DIB
+namespace DIB
 
 open ScrabbleUtil
 open ScrabbleUtil.ServerCommunication
@@ -126,7 +126,8 @@ module Scrabble =
                 aux st'
             | RCM (CMPlayed (pid, ms, points)) ->
                 (* Successful play by other player. Update your state *)
-                let st' = st |> State.updateBoard id |> State.changeTurn 
+                let placedTiles = List.map (fun (coord, (_ , tile)) -> (coord, tile)) ms
+                let st' = st |> State.placeLetters (Seq.ofList placedTiles) |> State.changeTurn 
                 aux st'
             | RCM (CMPlayFailed (pid, ms)) ->
                 (* Failed play. Update your state *)
