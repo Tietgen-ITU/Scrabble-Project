@@ -71,9 +71,17 @@ module State =
         Map.tryFind key map
 
     let placeLetter (tile: (char * uint32)) (st: state) (coordinate: coord) = 
+        // TODO: Place them on the board as well... and not only in the new map
         match st.tilePlacement with 
         | FoundValue coordinate _ -> failwith "There is already a tile placed at that coordinate"
         | _ -> {st with tilePlacement = Map.add coordinate tile st.tilePlacement }
+
+    let placeLetters tiles =
+        Seq.foldBack (fun (coord, tile) acc -> placeLetter tile acc coord ) tiles
+
+    let hasLetter key = function 
+        | FoundValue key _ -> true
+        | _ -> false
 
     (* 
         Updates the board with the function provided. This is created as there are a lot of different
