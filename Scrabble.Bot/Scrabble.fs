@@ -137,11 +137,11 @@ module Scrabble =
                                     |> State.placeLetters (Seq.ofList placedTiles) 
                                     |> State.addPoints pid points
                                     |> State.changeTurn
-                                     
+
                 aux st'
             | RCM (CMPlayFailed (pid, ms)) ->
                 (* Failed play. Update your state *)
-                let st' = State.mkState st.board st.dict st.playerId st.hand st.players pid // This state needs to be updated
+                let st' = State.changeTurn st
                 aux st'
             | RCM (CMGameOver _) -> ()
             | RCM a -> failwith (sprintf "not implmented: %A" a)
