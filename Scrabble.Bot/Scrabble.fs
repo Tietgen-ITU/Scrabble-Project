@@ -50,10 +50,10 @@ module State =
         hand          : MultiSet.MultiSet<uint32>
         players       : List<bool>
         playerTurn    : uint32
-        tilePlacement : Map<coord, (char * uint32)>
+        tilePlacement : Map<coord, (char * int)>
     }
 
-    let mkState b d pn h pl pt = {board = b; dict = d;  playerId = pn; hand = h; players = pl; playerTurn = pt; tilePlacement = Map.empty<coord, (char * uint32)>}
+    let mkState b d pn h pl pt = {board = b; dict = d;  playerId = pn; hand = h; players = pl; playerTurn = pt; tilePlacement = Map.empty<coord, (char * int)>}
     let removePlayer st playerIdToRemove = {st with players = List.updateAt (playerIdToRemove-1) false st.players}
 
     let board st         = st.board
@@ -70,7 +70,7 @@ module State =
     let private (|FoundValue|_|) key map =
         Map.tryFind key map
 
-    let placeLetter (tile: (char * uint32)) (st: state) (coordinate: coord) = 
+    let placeLetter (tile: (char * int)) (st: state) (coordinate: coord) = 
         // TODO: Place them on the board as well... and not only in the new map
         match st.tilePlacement with 
         | FoundValue coordinate _ -> failwith "There is already a tile placed at that coordinate"
