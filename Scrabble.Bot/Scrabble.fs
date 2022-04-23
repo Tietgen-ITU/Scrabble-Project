@@ -47,14 +47,14 @@ module State =
         board         : Parser.board
         dict          : Dictionary.Dict
         playerId      : uint32
-        points        : int
+        points        : List<int>
         hand          : MultiSet.MultiSet<uint32>
         players       : List<bool>
         playerTurn    : uint32
         tilePlacement : Map<coord, (char * int)>
     }
 
-    let mkState b d pn h pl pt = {board = b; dict = d;  playerId = pn; hand = h; players = pl; playerTurn = pt; tilePlacement = Map.empty<coord, (char * int)>; points = 0}
+    let mkState b d pn h pl pt = {board = b; dict = d;  playerId = pn; hand = h; players = pl; playerTurn = pt; tilePlacement = Map.empty<coord, (char * int)>; points = [ for i in 1 .. pl.Length -> 0 ]}
     let removePlayer st playerIdToRemove = {st with players = List.updateAt (playerIdToRemove-1) false st.players}
 
     let board st         = st.board
@@ -69,9 +69,7 @@ module State =
     let addTileToHand st tile = {st with hand = st.hand.Add tile }
 
     let addPoints playerId points st = 
-        if st.playerId = playerId then
-            {st with points = st.points + points}
-        else st
+        {st with points = List.updateAt (int playerId-1) (points+(st.points.Item (int playerId-1))) st.points}
 
     let private (|FoundValue|_|) key map =
         Map.tryFind key map
@@ -135,7 +133,7 @@ module Scrabble =
                 let placedTiles = List.map (fun (coord, (_ , tile)) -> (coord, tile)) ms
                 let st' = st 
                                     |> State.placeLetters (Seq.ofList placedTiles) 
-                                    |> State.addPoints pid points
+                                    |> State.addPoints  pid points
                                     |> State.changeTurn
 
                 aux st'
