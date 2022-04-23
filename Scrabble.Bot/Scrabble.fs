@@ -85,8 +85,8 @@ module State =
     let placeLetters tiles =
         Seq.foldBack (fun (coord, tile) acc -> placeLetter tile acc coord ) tiles
 
-    let hasLetter key = function 
-        | FoundValue key _ -> true
+    let hasLetter coordinate = function 
+        | FoundValue coordinate _ -> true
         | _ -> false
 
     (* 
