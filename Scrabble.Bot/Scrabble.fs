@@ -126,7 +126,11 @@ module Scrabble =
             match msg with
             | RCM (CMPlaySuccess (ms, points, newPieces)) ->
                 (* Successful play by you. Update your state (remove old tiles, add the new ones, change turn, etc) *)
-                let st' = List.fold (fun acc s -> State.addTileToHand acc s) st newPieces |> State.changeTurn   // This state needs to be updated
+                let placedTiles = List.map (fun (coord, (_ , tile)) -> (coord, tile)) ms
+                let st' = List.fold (fun acc s -> State.addTileToHand acc s) st newPieces 
+                                        |> State.placeLetters (Seq.ofList placedTiles)
+                                        |> State.changeTurn
+                                        |> State.addPoints st.playerId points   // This state needs to be updated
                 aux st'
             | RCM (CMPlayed (pid, ms, points)) ->
                 (* Successful play by other player. Update your state *)
