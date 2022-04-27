@@ -1,4 +1,4 @@
-namespace DIB
+﻿namespace DIB
 
 open ScrabbleUtil
 open ScrabbleUtil.ServerCommunication
@@ -47,14 +47,14 @@ module State =
         board         : Parser.board
         dict          : Dictionary.Dict
         playerId      : uint32
-        points        : int
+        points        : List<int>
         hand          : MultiSet.MultiSet<uint32>
         players       : List<bool>
         playerTurn    : uint32
         tilePlacement : Map<coord, (char * int)>
     }
 
-    let mkState b d pn h pl pt = {board = b; dict = d;  playerId = pn; hand = h; players = pl; playerTurn = pt; tilePlacement = Map.empty<coord, (char * int)>; points = 0}
+    let mkState b d pn h pl pt = {board = b; dict = d;  playerId = pn; hand = h; players = pl; playerTurn = pt; tilePlacement = Map.empty<coord, (char * int)>; points = [ for i in 1 .. pl.Length -> 0 ]}
     let removePlayer st playerIdToRemove = {st with players = List.updateAt (playerIdToRemove-1) false st.players}
 
     let board st         = st.board
@@ -66,12 +66,13 @@ module State =
 
     let removeTileFromHand st tileId = {st with hand = st.hand.Remove tileId }
 
-    let addTileToHand st tileId value = {st with hand = st.hand.Add (tileId, value) }
+    let removeTilesFromHand (tileIds:List<uint32>) st = 
+        List.fold (fun acc tileId -> removeTileFromHand acc tileId) st tileIds
+
+    let addTileToHand st tile = {st with hand = st.hand.Add tile }
 
     let addPoints playerId points st = 
-        if st.playerId = playerId then
-            {st with points = st.points + points}
-        else st
+        {st with points = List.updateAt (int playerId-1) (points+(st.points.Item (int playerId-1))) st.points}
 
     let private (|FoundValue|_|) key map =
         Map.tryFind key map
@@ -128,7 +129,13 @@ module Scrabble =
             match msg with
             | RCM (CMPlaySuccess (ms, points, newPieces)) ->
                 (* Successful play by you. Update your state (remove old tiles, add the new ones, change turn, etc) *)
-                let st' = State.mkState st.board st.dict st.playerId st.hand st.players st.playerTurn  // This state needs to be updated
+                let tilesToRemove = List.map (fun (_, (tileId , _)) -> (tileId)) ms
+                let placedTiles = List.map (fun (coord, (_ , tile)) -> (coord, tile)) ms
+                let st' = List.fold (fun acc s -> State.addTileToHand acc s) st newPieces 
+                                        |> State.placeLetters (Seq.ofList placedTiles)
+                                        |> State.changeTurn
+                                        |> State.addPoints st.playerId points
+                                        |> State.removeTilesFromHand tilesToRemove   // This state needs to be updated
                 aux st'
             | RCM (CMPlayed (pid, ms, points)) ->
                 (* Successful play by other player. Update your state *)
