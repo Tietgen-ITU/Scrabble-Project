@@ -11,7 +11,7 @@ type state =
     { board: Parser.board
       dict: Dictionary.Dict
       playerId: uint32
-      points: int
+      points: List<int>
       hand: MultiSet.MultiSet<uint32>
       players: List<bool>
       playerTurn: uint32
@@ -25,7 +25,7 @@ let mkState b d pn h pl pt =
       players = pl
       playerTurn = pt
       tilePlacement = Map.empty<coord, (char * int)>
-      points = 0 }
+      points = [ for i in 1 .. pl.Length -> 0 ] }
 
 let removePlayer st playerIdToRemove =
     { st with players = List.updateAt (playerIdToRemove - 1) false st.players }
@@ -40,14 +40,13 @@ let playerTurn st = st.playerTurn
 let removeTileFromHand st tileId =
     { st with hand = st.hand.Remove tileId }
 
-let addTileToHand st tileId value =
-    { st with hand = st.hand.Add(tileId, value) }
+let removeTilesFromHand (tileIds: List<uint32>) st =
+    List.fold (fun acc tileId -> removeTileFromHand acc tileId) st tileIds
 
-let addPoints playerId points st =
-    if st.playerId = playerId then
-        { st with points = st.points + points }
-    else
-        st
+let addTileToHand st tile = { st with hand = st.hand.Add tile }
+
+let addPoints (playerId: uint32) points st =
+    { st with points = List.updateAt (int playerId - 1) (points + (st.points.Item(int playerId - 1))) st.points }
 
 let private (|FoundValue|_|) key map = Map.tryFind key map
 
@@ -66,11 +65,10 @@ let hasLetter coordinate =
     | _ -> false
 
 (*
-        Updates the board with the function provided. This is created as there are a lot of different
-        functions that both parses the board and does other stuff. So this is created as a more general purpose.
-
-        NOTE: We could hide this function and create more specific functions if we want to.
-    *)
+    Updates the board with the function provided. This is created as there are a lot of different
+    functions that both parses the board and does other stuff. So this is created as a more general purpose.
+    NOTE: We could hide this function and create more specific functions if we want to.
+*)
 let updateBoard f st = { st with board = f st.board }
 
 let playerIsActive (st: state) = st.players.Item(int st.playerTurn - 1)

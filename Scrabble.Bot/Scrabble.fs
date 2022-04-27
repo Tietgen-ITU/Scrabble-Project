@@ -7,7 +7,6 @@ open System.IO
 
 open ScrabbleUtil.DebugPrint
 
-open State
 // The RegEx module is only used to parse human input. It is not used for the final product.
 
 module RegEx =
@@ -62,8 +61,15 @@ module Scrabble =
             match msg with
             | RCM (CMPlaySuccess (ms, points, newPieces)) ->
                 (* Successful play by you. Update your state (remove old tiles, add the new ones, change turn, etc) *)
+                let tilesToRemove = List.map (fun (_, (tileId, _)) -> (tileId)) ms
+                let placedTiles = List.map (fun (coord, (_, tile)) -> (coord, tile)) ms
+
                 let st' =
-                    State.mkState st.board st.dict st.playerId st.hand st.players st.playerTurn // This state needs to be updated
+                    List.fold (fun acc s -> State.addTileToHand acc s) st newPieces
+                    |> State.placeLetters (Seq.ofList placedTiles)
+                    |> State.changeTurn
+                    |> State.addPoints st.playerId points
+                    |> State.removeTilesFromHand tilesToRemove // This state needs to be updated
 
                 aux st'
             | RCM (CMPlayed (pid, ms, points)) ->
