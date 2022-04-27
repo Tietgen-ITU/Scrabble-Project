@@ -1,4 +1,4 @@
-﻿namespace DIB
+namespace DIB
 
 open ScrabbleUtil
 open ScrabbleUtil.ServerCommunication
@@ -43,26 +43,51 @@ module State =
     // but it could, potentially, keep track of other useful
     // information, such as number of players, player turn, etc.
 
-    type state =
-        { board: Parser.board
-          dict: ScrabbleUtil.Dictionary.Dict
-          playerNumber: uint32
-          hand: MultiSet.MultiSet<uint32> }
+    type state = {
+        board         : Parser.board
+        dict          : Dictionary.Dict
+        playerId      : uint32
+        points        : int
+        hand          : MultiSet.MultiSet<uint32>
+        players       : List<bool>
+        playerTurn    : uint32
+        tilePlacement : Map<coord, (char * int)>
+    }
 
-    let mkState b d pn h =
-        { board = b
-          dict = d
-          playerNumber = pn
-          hand = h }
+    let mkState b d pn h pl pt = {board = b; dict = d;  playerId = pn; hand = h; players = pl; playerTurn = pt; tilePlacement = Map.empty<coord, (char * int)>; points = 0}
+    let removePlayer st playerIdToRemove = {st with players = List.updateAt (playerIdToRemove-1) false st.players}
 
-    let board st = st.board
-    let dict st = st.dict
-    let playerNumber st = st.playerNumber
-    let hand st = st.hand
+    let board st         = st.board
+    let dict st          = st.dict
+    let playerId st      = st.playerId
+    let hand st          = st.hand
+    let players st       = st.players
+    let playerTurn st    = st.playerTurn
 
     let removeTileFromHand st tileId = {st with hand = st.hand.Remove tileId }
 
     let addTileToHand st tileId value = {st with hand = st.hand.Add (tileId, value) }
+
+    let addPoints playerId points st = 
+        if st.playerId = playerId then
+            {st with points = st.points + points}
+        else st
+
+    let private (|FoundValue|_|) key map =
+        Map.tryFind key map
+
+    let placeLetter (tile: (char * int)) (st: state) (coordinate: coord) = 
+        // TODO: Place them on the board as well... and not only in the new map
+        match st.tilePlacement with 
+        | FoundValue coordinate _ -> failwith "There is already a tile placed at that coordinate"
+        | _ -> {st with tilePlacement = Map.add coordinate tile st.tilePlacement }
+
+    let placeLetters tiles =
+        Seq.foldBack (fun (coord, tile) acc -> placeLetter tile acc coord ) tiles
+
+    let hasLetter coordinate = function 
+        | FoundValue coordinate _ -> true
+        | _ -> false
 
     (* 
         Updates the board with the function provided. This is created as there are a lot of different
@@ -72,8 +97,15 @@ module State =
     *)
     let updateBoard f st = { st with board = f st.board }
 
+    let playerIsActive (st:state) = st.players.Item (int st.playerTurn-1)
+
+    let rec changeTurn (st:state) = 
+        match st.playerTurn >= uint32 st.players.Length with
+        | true -> if playerIsActive {st with playerTurn = 1u} then {st with playerTurn = 1u} else changeTurn {st with playerTurn = 1u}
+        | false -> if playerIsActive{st with playerTurn = (st.playerTurn+1u)} then {st with playerTurn = (st.playerTurn+1u)} else changeTurn {st with playerTurn = (st.playerTurn+1u)}
+
 module Scrabble =
-    open System.Threading
+    open System.Threading     
 
     let playGame cstream pieces (st: State.state) =
 
@@ -87,26 +119,31 @@ module Scrabble =
             let input = System.Console.ReadLine()
             let move = RegEx.parseMove input
 
-            debugPrint (sprintf "Player %d -> Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
+            debugPrint (sprintf "Player %d -> Server:\n%A\n" (State.playerId st) move) // keep the debug lines. They are useful.
             send cstream (SMPlay move)
 
             let msg = recv cstream
-            debugPrint (sprintf "Player %d <- Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
+            debugPrint (sprintf "Player %d <- Server:\n%A\n" (State.playerId st) move) // keep the debug lines. They are useful.
 
             match msg with
             | RCM (CMPlaySuccess (ms, points, newPieces)) ->
                 (* Successful play by you. Update your state (remove old tiles, add the new ones, change turn, etc) *)
-                let st' = st // This state needs to be updated
+                let st' = State.mkState st.board st.dict st.playerId st.hand st.players st.playerTurn  // This state needs to be updated
                 aux st'
             | RCM (CMPlayed (pid, ms, points)) ->
                 (* Successful play by other player. Update your state *)
-                let st' = st // This state needs to be updated
-                aux st'
-            | RCM (CMPlayFailed (pid, ms)) ->
-                (* Failed play. Update your state *)
-                let st' = st // This state needs to be updated
+                let placedTiles = List.map (fun (coord, (_ , tile)) -> (coord, tile)) ms
+                let st' = st 
+                                    |> State.placeLetters (Seq.ofList placedTiles) 
+                                    |> State.addPoints pid points
+                                    |> State.changeTurn
+
                 aux st'
             | RCM (CMGameOver _) -> ()
+            | RCM (CMPassed _) | RCM (CMTimeout _) | RCM (CMPlayFailed _) -> 
+                (*The player failed to make a move.. let the next player have the turn*)
+                let st' = State.changeTurn st
+                aux st'
             | RCM a -> failwith (sprintf "not implmented: %A" a)
             | RGPE err ->
                 printfn "Gameplay Error:\n%A" err
@@ -119,7 +156,7 @@ module Scrabble =
         (boardP: boardProg)
         (dictf: bool -> Dictionary.Dict)
         (numPlayers: uint32)
-        (playerNumber: uint32)
+        (playerId: uint32)
         (playerTurn: uint32)
         (hand: (uint32 * uint32) list)
         (tiles: Map<uint32, tile>)
@@ -135,7 +172,7 @@ module Scrabble =
                       hand =  %A
                       timeout = %A\n\n"
                 numPlayers
-                playerNumber
+                playerId
                 playerTurn
                 hand
                 timeout
@@ -145,6 +182,9 @@ module Scrabble =
         //let dict = dictf false // Uncomment if using a trie for your dictionary
         let board = Parser.mkBoard boardP
 
+        let players = [for i in 0.. int numPlayers-1 -> true]
+                  
         let handSet = List.fold (fun acc (x, k) -> MultiSet.add x k acc) MultiSet.empty hand
 
-        fun () -> playGame cstream tiles (State.mkState board dict playerNumber handSet)
+        fun () -> playGame cstream tiles (State.mkState board dict  playerId handSet players playerTurn)
+        
