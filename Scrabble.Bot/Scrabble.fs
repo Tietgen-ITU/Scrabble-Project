@@ -142,7 +142,7 @@ module Scrabble =
                 let placedTiles = List.map (fun (coord, (_ , tile)) -> (coord, tile)) ms
                 let st' = st 
                                     |> State.placeLetters (Seq.ofList placedTiles) 
-                                    |> State.addPoints  pid points
+                                    |> State.addPoints pid points
                                     |> State.changeTurn
 
                 aux st'
