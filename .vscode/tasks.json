@@ -1,0 +1,14 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "msbuild",
+			"problemMatcher": [
+				"$msCompile"
+			],
+			"group": "build",
+			"label": "Build: Scrabble.Console.fsproj",
+			"detail": "Build the Scrabble.Console.fsproj project using dotnet build"
+		}
+	]
+}
