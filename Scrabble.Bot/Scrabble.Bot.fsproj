@@ -14,6 +14,7 @@
 Group name: &lt;De Imperative Banditter&gt; (optional since this is hosted in a public Github repository)</Description>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="PointCalculator.fs" />
     <Compile Include="MultiSet.fsi" />
     <Compile Include="MultiSet.fs" />
     <Compile Include="Dict.fsi" />
@@ -28,11 +29,9 @@ Group name: &lt;De Imperative Banditter&gt; (optional since this is hosted in a 
     <Compile Include="Scrabble.fsi" />
     <Compile Include="Scrabble.fs" />
   </ItemGroup>
-
   <ItemGroup>
     <Reference Include="../Scrabble.Dependencies/ScrabbleUtil.dll" />
- </ItemGroup>
-
+  </ItemGroup>
   <ItemGroup>
     <PackageReference Include="FParsec" Version="1.1.1" />
     <PackageReference Update="FSharp.Core" Version="6.0.3" />
