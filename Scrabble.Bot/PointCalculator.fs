@@ -10,14 +10,17 @@ module internal PointCalculator =
         |> (fun (StateMonad.Success sq) -> sq) 
         |> Option.get
 
+    let private getResult defvalue = function
+        | StateMonad.Success a -> a
+        | _ -> defvalue
     let calculateWordPoint (word : (coord * (char * int)) list) (board: Parser.board) : int = 
         let mapToList  (square:Map<int,Parser.squareFun>)  =
             Map.toList square 
 
-        let mapToListFunc (word: (char*int) list) (square:Map<int,Parser.squareFun>)  =
-            Map.toList square
+        let mapToListFunc (word: (char*int) list) pos (square:Map<int,Parser.squareFun>) =
+            Map.toList square |> List.map (fun (a, sqFun) -> (a, (fun acc -> sqFun word pos acc)))
 
-        let letters = List.map (fun (_, letter) -> letter)
+        let letters = List.map (fun (_, letter) -> letter) word
 
         let accFunc acc (l, (c, i)) = (getSquare l board.squares) |> mapToList |> (@) acc 
 

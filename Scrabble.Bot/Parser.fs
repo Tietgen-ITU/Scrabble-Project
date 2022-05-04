@@ -303,6 +303,7 @@ let stmntParse = TopLevelParser
 (* The rest of your parser goes here *)
 
 type word = (char * int) list
+// word - pos in word - acc of points - result
 type squareFun = word -> int -> int -> Result<int, Error>
 type square = Map<int, squareFun>
 
