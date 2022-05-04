@@ -67,14 +67,14 @@ let playWord () =
 
     let state =
         State.placeLetters
-            (Seq.ofList [ ((0, 0), ('C', 1))
-                          ((0, 1), ('A', 1))
-                          ((0, 2), ('B', 1))
-                          ((0, 3), ('L', 1))
-                          ((0, 4), ('E', 1)) ])
+            (Seq.ofList [ ((0, 0), (3u, ('C', 1)))
+                          ((0, 1), (1u, ('A', 1)))
+                          ((0, 2), (2u, ('B', 1)))
+                          ((0, 3), (12u, ('L', 1)))
+                          ((0, 4), (5u, ('E', 1))) ])
             state
 
     let res = getNextMove state pieces
-    Assert.AreEqual(((1, 0), 'A'), res |> List.item 0)
-    Assert.AreEqual(((2, 0), 'R'), res |> List.item 1)
-    Assert.AreEqual(((3, 0), 'E'), res |> List.item 2)
+    Assert.AreEqual(((1, 0), (1u, ('A', 1))), res |> List.item 0)
+    Assert.AreEqual(((2, 0), (18u, ('R', 1))), res |> List.item 1)
+    Assert.AreEqual(((3, 0), (5u, ('E', 1))), res |> List.item 2)

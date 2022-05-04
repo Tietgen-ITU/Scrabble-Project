@@ -7,4 +7,4 @@ type Direction =
     | Horizontal
     | Vertical
 
-val getNextMove : state -> Map<uint32, tile> -> List<coord * char>
+val getNextMove : state -> Map<uint32, tile> -> List<coord * (uint32 * (char * int))>
