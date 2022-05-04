@@ -38,4 +38,9 @@ Group name: &lt;De Imperative Banditter&gt; (optional since this is hosted in a 
     <PackageReference Include="FSharp.Quotations.Evaluator" Version="2.1.0" />
     <PackageReference Include="FsPickler" Version="5.3.2" />
   </ItemGroup>
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+      <_Parameter1>Scrabble.Bot.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
 </Project>
