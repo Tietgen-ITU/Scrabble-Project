@@ -8,12 +8,15 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!--<Compile Include="DictTests.fs" />
-    <Compile Include="MultiSetTests.fs" />-->
+    <Compile Include="DictTests.fs" />
+    <Compile Include="MultiSetTests.fs" />
     <Compile Include="MoveTests.fs" />
+    <Compile Include="PointCalculatorTests.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
-
+  <ItemGroup>
+    <Reference Include="../Scrabble.Dependencies/ScrabbleUtil.dll" />
+  </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.11.0" />
     <PackageReference Include="NUnit" Version="3.13.2" />
