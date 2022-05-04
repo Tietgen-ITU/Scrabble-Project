@@ -219,11 +219,11 @@ let validateDirection (st: state) (direction: Direction) (coord: coord) (dict: D
 
     let rec aux (offset: int32) (coord: coord) (dict: Dictionary.Dict) (valid: bool) =
         match getLetter (getNextCoordinate coord offset direction) st with
-        | Some (c, _) ->
+        | Some c ->
             match nextArc c dict with
             | Some (valid, newArc) -> aux (auxGetNextOffset offset) coord newArc valid
             | None ->
-                printf "1. Can't go from %c at %A\n" c coord
+                printf "1. Can't go from %c at %A\n" (c |> snd |> fst) coord
                 false
         | _ ->
             if offset <= 0 then
@@ -240,7 +240,7 @@ let validateDirection (st: state) (direction: Direction) (coord: coord) (dict: D
     aux -1 coord dict valid
 
 // Returns true if the move is valid, and false if it aint
-let validateMove (st: state) (pieces: Map<uint32, tile>) (move: (coord * char) list) =
+let validateMove (st: state) (pieces: Map<uint32, tile>) (move: (coord * (uint32 * (char * int))) list) =
     // Move through each move
     // Test in each direction, go through like normal. So go up then down, then left, then right.
     // Each tested coord is added to the list of tested coords.
@@ -255,7 +255,7 @@ let validateMove (st: state) (pieces: Map<uint32, tile>) (move: (coord * char) l
         else
             true
 
-    let rec aux (move: (coord * char) list) =
+    let rec aux move =
         match move with
         | [] -> true
         | (coord, letter) :: rest ->
