@@ -23,8 +23,10 @@ let getRack (state: State.state) (pieces: Map<uint32, ScrabbleUtil.tile>) : char
             :: rack)
         []
 
-let recordPlay (pos: coord) (c: char) (word: char list) =
+let recordPlay (pos: coord) (c: char) (word: char list) (plays: (coord * char) list) : (coord * char) list =
     printf "Register play: (%d, %d) %c creating word: %s\n" (pos |> fst) (pos |> snd) c (listToString word)
+
+    plays @ [ (pos, c) ]
 
 let getLetter coordinate (state: State.state) =
     match state.tilePlacement.TryFind coordinate with
@@ -44,26 +46,26 @@ let getAllowedLetters (dict: Dictionary.Dict) =
 
     aux dict alphabet Set.empty
 
-let loopRack (f: char -> char list -> unit) (rack: char list) (allowedLetters: Set<char>) =
-    let rec aux (rack': char list) (allowedLetters: Set<char>) =
+let loopRack (f: char -> char list -> 'a list) (rack: char list) (allowedLetters: Set<char>) : 'a list list =
+    let rec aux (rack': char list) (allowedLetters: Set<char>) (out: 'a list list) : 'a list list =
         match rack' with
-        | [] -> ()
+        | [] -> out
         | letter :: rack' ->
-            printf
-                "Letter: %c, Allowed letters: %s, hand: %s\n"
-                letter
-                (listToString (Set.toList allowedLetters))
-                (rack |> listToString)
+            let out =
+                if Set.contains letter allowedLetters then
+                    match (f
+                               letter
+                               (rack
+                                |> List.removeAt (rack |> List.findIndex (fun c -> c.Equals(letter)))))
+                        with
+                    | [] -> out
+                    | plays -> plays :: out
+                else
+                    out
 
-            if Set.contains letter allowedLetters then
-                f
-                    letter
-                    (rack
-                     |> List.removeAt (rack |> List.findIndex (fun c -> c.Equals(letter))))
+            aux rack' allowedLetters out
 
-            aux rack' allowedLetters
-
-    aux rack allowedLetters
+    aux rack allowedLetters []
 
 let nextArc (c: char) (arc: Dictionary.Dict) = Dictionary.step c arc
 
@@ -83,16 +85,8 @@ let goOn
     (rack: char list)
     (newArc: (bool * Dictionary.Dict) option)
     (oldArc: Dictionary.Dict)
-    =
-    printf
-        "Go on, coord (%d, %d), pos %d, newArc %A, oldArc %A, word %s\n"
-        (anchor |> fst)
-        (anchor |> snd)
-        pos
-        (newArc |> Option.get |> snd)
-        (oldArc)
-        (listToString word)
-
+    (plays: (coord * char) list)
+    : (coord * char) list =
     let leftCoord = getNextCoordinate anchor (pos - 1) direction
     let rightCoord = getNextCoordinate anchor (pos + 1) direction
 
@@ -105,26 +99,36 @@ let goOn
         match newArc with
         | Some (_, newArc) -> // We are on the old arc
             // Letter is on oldarc and there is no letter directly to the left
-            if roomToTheLeft then
-                recordPlay (getNextCoordinate anchor pos direction) l word
-                genAux state anchor (pos - 1) direction word rack newArc
+            let plays =
+                match roomToTheLeft with
+                | true ->
+                    recordPlay (getNextCoordinate anchor pos direction) l word plays
+                    |> genAux state anchor (pos - 1) direction word rack newArc
+                | false -> []
 
-            // Switch direction
+            // SwiExactly how these types, squares, and boards are used will be made clear in the inividual assignments.tch direction
             let newArc = Dictionary.reverse newArc |> Option.get |> snd // TODO: This is ugly, and possibly unsafe
 
             if roomToTheLeft && roomToTheRight then
-                genAux state anchor 1 direction word rack newArc
-        | None -> printf "Not on old arc: offset: %d, (%d, %d) %c\n" pos (anchor |> fst) (anchor |> snd) l // TODO: No clue if this ever happens, or how to handle it
-    elif pos > 0 then
+                genAux state anchor 1 direction word rack newArc plays
+            else
+                []
+        | None ->
+            printf "Not on old arc: offset: %d, (%d, %d) %c\n" pos (anchor |> fst) (anchor |> snd) l // TODO: No clue if this ever happens, or how to handle it
+            []
+    else
         let word = word @ [ l ]
 
         match newArc with
         | Some (_, newArc) ->
-            if roomToTheRight then
-                recordPlay (getNextCoordinate anchor pos direction) l word
-                genAux state anchor (pos + 1) direction word rack newArc
-        | None -> printf "Not on old arc: offset: %d, (%d, %d) %c\n" pos (anchor |> fst) (anchor |> snd) l // TODO: No clue if this ever happens, or how to handle it
-
+            match roomToTheRight with
+            | true ->
+                recordPlay (getNextCoordinate anchor pos direction) l word plays
+                |> genAux state anchor (pos + 1) direction word rack newArc
+            | false -> []
+        | None ->
+            printf "Not on old arc: offset: %d, (%d, %d) %c\n" pos (anchor |> fst) (anchor |> snd) l // TODO: No clue if this ever happens, or how to handle it
+            []
 
 let rec genAux
     (state: State.state)
@@ -134,24 +138,29 @@ let rec genAux
     (word: char list)
     (rack: char list)
     (arc: Dictionary.Dict)
-    =
+    (plays: (coord * char) list)
+    : (coord * char) list =
     match getLetter (getNextCoordinate anchor pos direction) state with
-    | Some (c, _) -> goOn (genAux) state anchor pos direction c word rack (nextArc c arc) arc
+    | Some (c, _) -> goOn (genAux) state anchor pos direction c word rack (nextArc c arc) arc plays
+    | _ when rack.IsEmpty -> plays
     | None ->
-        if rack.IsEmpty then
-            failwith "Rack is empty" // TODO: Not entirely sure this is the right
-
         let allowedLetters = getAllowedLetters arc
-        printf "Allowed letters: %s\n" (listToString (Set.toList allowedLetters))
 
-        loopRack
-            (fun c rack' -> goOn (genAux) state anchor pos direction c word rack' (nextArc c arc) arc)
-            rack
-            allowedLetters
+        let possiblePlays =
+            loopRack
+                (fun c rack' -> goOn (genAux) state anchor pos direction c word rack' (nextArc c arc) arc plays)
+                rack
+                allowedLetters
+
+        match possiblePlays with
+        | [] ->
+            printf "Cannot play: %s\n" (listToString word)
+            []
+        | play :: _ -> play
 
 // TODO: Handle blanks
 
-let gen (state: State.state) (pieces: Map<uint32, ScrabbleUtil.tile>) =
+let gen (state: State.state) (pieces: Map<uint32, ScrabbleUtil.tile>) : (coord * char) list =
     let anchor: coord = (0, 0) // TODO: Find a way to determine this
     let pos = 0 // Should always be 0 when starting
     let dir = Vertical // TODO: Find a way to determine this
@@ -159,6 +168,6 @@ let gen (state: State.state) (pieces: Map<uint32, ScrabbleUtil.tile>) =
     let rack = getRack state pieces // Retrieve our current hand
     let initArc = state.dict
 
-    genAux state anchor pos dir word rack initArc
+    let res = genAux state anchor pos dir word rack initArc []
 
-    0 // Replace
+    res
