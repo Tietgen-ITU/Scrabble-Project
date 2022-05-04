@@ -85,6 +85,31 @@ let playWord () =
     Assert.AreEqual(((3, 0), (5u, ('E', 1))), res |> Option.get |> List.item 2)
 
 [<Test>]
+let playWordDirect () =
+    let (sorted, pieces) = getSortedAndPieces ()
+
+    let lookupTable = getLookuptable sorted
+
+    let state =
+        mockState [ getHandId 'A' lookupTable
+                    getHandId 'R' lookupTable
+                    getHandId 'E' lookupTable ]
+
+    let state =
+        State.placeLetters
+            (Seq.ofList [ ((0, 0), (3u, ('C', 1)))
+                          ((0, 1), (1u, ('A', 1)))
+                          ((0, 2), (2u, ('B', 1)))
+                          ((0, 3), (12u, ('L', 1)))
+                          ((0, 4), (5u, ('E', 1))) ])
+            state
+
+    let res = gen state pieces (0, 0) Vertical
+    Assert.AreEqual(((1, 0), (1u, ('A', 1))), res |> List.head |> List.item 0)
+    Assert.AreEqual(((2, 0), (18u, ('R', 1))), res |> List.head |> List.item 1)
+    Assert.AreEqual(((3, 0), (5u, ('E', 1))), res |> List.head |> List.item 2)
+
+[<Test>]
 let invalidMove1 () =
     let (_, pieces) = getSortedAndPieces ()
     let state = mockState []
@@ -92,19 +117,19 @@ let invalidMove1 () =
     let state =
         State.placeLetters
             (Seq.ofList [ ((0, 0), (1u, ('A', 1)))
-                          ((0, 1), (2u,  ('B', 1)))
+                          ((0, 1), (2u, ('B', 1)))
                           ((0, 2), (12u, ('L', 1)))
-                          ((0, 3), (5u,  ('E', 1)))
-                          ((1, 2), (9u,  ('I', 1)))
+                          ((0, 3), (5u, ('E', 1)))
+                          ((1, 2), (9u, ('I', 1)))
                           ((2, 2), (15u, ('O', 1)))
                           ((3, 2), (14u, ('N', 1))) ])
             state
 
     let move =
-        [ ((1, -2), (3u,  ('C', 1)))
-          ((1, -1), (1u,  ('A', 1)))
-          ((1, 0) , (18u, ('R', 1)))
-          ((1, 1) , (5u,  ('E', 1))) ]
+        [ ((1, -2), (3u, ('C', 1)))
+          ((1, -1), (1u, ('A', 1)))
+          ((1, 0), (18u, ('R', 1)))
+          ((1, 1), (5u, ('E', 1))) ]
 
     Assert.IsFalse(validateMove state pieces move)
 
@@ -116,16 +141,16 @@ let invalidMove2 () =
     let state =
         State.placeLetters
             (Seq.ofList [ ((0, 0), (1u, ('A', 1)))
-                          ((0, 1), (2u,  ('B', 1)))
+                          ((0, 1), (2u, ('B', 1)))
                           ((0, 2), (12u, ('L', 1)))
-                          ((0, 3), (5u,  ('E', 1))) ])
+                          ((0, 3), (5u, ('E', 1))) ])
             state
 
     let move =
-        [ ((1, -2), (3u,  ('C', 1)))
-          ((1, -1), (1u,  ('A', 1)))
-          ((1, 0),  (18u, ('R', 1)))
-          ((1, 1),  (5u,  ('E', 1))) ]
+        [ ((1, -2), (3u, ('C', 1)))
+          ((1, -1), (1u, ('A', 1)))
+          ((1, 0), (18u, ('R', 1)))
+          ((1, 1), (5u, ('E', 1))) ]
 
     Assert.IsFalse(validateMove state pieces move)
 
@@ -137,16 +162,16 @@ let invalidMove3 () =
     let state =
         State.placeLetters
             (Seq.ofList [ ((0, 0), (1u, ('A', 1)))
-                          ((0, 1), (2u,  ('B', 1)))
+                          ((0, 1), (2u, ('B', 1)))
                           ((0, 2), (12u, ('L', 1)))
-                          ((0, 3), (5u,  ('E', 1))) ])
+                          ((0, 3), (5u, ('E', 1))) ])
             state
 
     let move =
-        [ ((0, -1), (3u,  ('C', 1)))
-          ((1, -1), (1u,  ('A', 1)))
+        [ ((0, -1), (3u, ('C', 1)))
+          ((1, -1), (1u, ('A', 1)))
           ((2, -1), (18u, ('R', 1)))
-          ((3, -1), (5u,  ('E', 1))) ]
+          ((3, -1), (5u, ('E', 1))) ]
 
     Assert.IsTrue(validateMove state pieces move)
 
@@ -159,15 +184,15 @@ let invalidMove4 () =
         State.placeLetters
             (Seq.ofList [ ((0, -1), (3u, ('C', 1)))
                           ((0, 0), (1u, ('A', 1)))
-                          ((0, 1), (2u,  ('B', 1)))
+                          ((0, 1), (2u, ('B', 1)))
                           ((0, 2), (12u, ('L', 1)))
-                          ((0, 3), (5u,  ('E', 1))) ])
+                          ((0, 3), (5u, ('E', 1))) ])
             state
 
     let move =
-        [ ((1, 1), (1u,  ('A', 1)))
+        [ ((1, 1), (1u, ('A', 1)))
           ((2, 1), (18u, ('R', 1)))
-          ((3, 1), (5u,  ('E', 1))) ]
+          ((3, 1), (5u, ('E', 1))) ]
 
     // "BARE" doesn't exist in the dictionary
     Assert.IsFalse(validateMove state pieces move)
@@ -181,17 +206,17 @@ let invalidMove5 () =
         State.placeLetters
             (Seq.ofList [ ((0, -1), (3u, ('C', 1)))
                           ((0, 0), (1u, ('A', 1)))
-                          ((0, 1), (2u,  ('B', 1)))
+                          ((0, 1), (2u, ('B', 1)))
                           ((0, 2), (12u, ('L', 1)))
-                          ((0, 3), (5u,  ('E', 1)))
-                          ((1, 2), (9u,  ('I', 1)))
+                          ((0, 3), (5u, ('E', 1)))
+                          ((1, 2), (9u, ('I', 1)))
                           ((2, 2), (15u, ('O', 1)))
                           ((3, 2), (14u, ('N', 1))) ])
             state
 
     let move =
-        [ ((1, 1), (1u,  ('A', 1)))
+        [ ((1, 1), (1u, ('A', 1)))
           ((2, 1), (18u, ('R', 1)))
-          ((3, 1), (5u,  ('E', 1))) ]
+          ((3, 1), (5u, ('E', 1))) ]
 
     Assert.IsFalse(validateMove state pieces move)
