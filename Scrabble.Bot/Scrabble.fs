@@ -61,11 +61,10 @@ module Scrabble =
             | RCM (CMPlaySuccess (ms, points, newPieces)) ->
                 (* Successful play by you. Update your state (remove old tiles, add the new ones, change turn, etc) *)
                 let tilesToRemove = List.map (fun (_, (tileId, _)) -> (tileId)) ms
-                let placedTiles = List.map (fun (coord, (_, tile)) -> (coord, tile)) ms
 
                 let st' =
                     List.fold (fun acc s -> State.addTileToHand acc s) st newPieces
-                    |> State.placeLetters (Seq.ofList placedTiles)
+                    |> State.placeLetters (Seq.ofList ms)
                     |> State.changeTurn
                     |> State.addPoints st.playerId points
                     |> State.removeTilesFromHand tilesToRemove // This state needs to be updated
@@ -73,11 +72,10 @@ module Scrabble =
                 aux st'
             | RCM (CMPlayed (pid, ms, points)) ->
                 (* Successful play by other player. Update your state *)
-                let placedTiles = List.map (fun (coord, (_, tile)) -> (coord, tile)) ms
 
                 let st' =
                     st
-                    |> State.placeLetters (Seq.ofList placedTiles)
+                    |> State.placeLetters (Seq.ofList ms)
                     |> State.addPoints pid points
                     |> State.changeTurn
 

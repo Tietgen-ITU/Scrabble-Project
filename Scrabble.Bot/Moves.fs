@@ -9,22 +9,22 @@ type Direction =
     | Horizontal
     | Vertical
 
-let listToString (chars: char list) =
-    string (List.fold (fun (sb: StringBuilder) (c: char) -> sb.Append(c)) (new StringBuilder()) chars)
+let listToString (chars: (uint32 * (char * int)) list) =
+    string (List.fold (fun (sb: StringBuilder) c -> sb.Append(char (c |> snd |> fst))) (new StringBuilder()) chars)
 
-let getRack (state: State.state) (pieces: Map<uint32, ScrabbleUtil.tile>) : char list =
+let getRack (state: State.state) (pieces: Map<uint32, ScrabbleUtil.tile>) : (uint32 * (char * int)) list =
     state.hand
     |> MultiSet.fold
         (fun rack piece _ ->
             (Map.find piece pieces
              |> Set.toSeq
              |> Seq.head // FIXME: This doesn't handle blanks, which is good as that is supposed to be handled by the algorithm
-             |> fst)
+             |> fun a -> (piece, (a))) 
             :: rack)
         []
 
-let recordPlay (pos: coord) (c: char) (word: char list) (plays: (coord * char) list) : (coord * char) list =
-    printf "Register play: (%d, %d) %c creating word: %s\n" (pos |> fst) (pos |> snd) c (listToString word)
+let recordPlay (pos: coord) (c: (uint32 * (char * int))) (word: (uint32 * (char * int)) list) (plays: (coord * (uint32 * (char * int))) list) : (coord * (uint32 * (char * int))) list =
+    printf "Register play: (%d, %d) %A creating word: %s\n" (pos |> fst) (pos |> snd) c (listToString word)
 
     plays @ [ (pos, c) ]
 
@@ -46,17 +46,17 @@ let getAllowedLetters (dict: Dictionary.Dict) =
 
     aux dict alphabet Set.empty
 
-let loopRack (f: char -> char list -> 'a list) (rack: char list) (allowedLetters: Set<char>) : 'a list list =
-    let rec aux (rack': char list) (allowedLetters: Set<char>) (out: 'a list list) : 'a list list =
+let loopRack (f: (uint32 * (char * int)) -> (uint32 * (char * int)) list -> 'a list) (rack: (uint32 * (char * int)) list) (allowedLetters: Set<char>) : 'a list list =
+    let rec aux (rack': (uint32 * (char * int)) list) (allowedLetters: Set<char>) (out: 'a list list) : 'a list list =
         match rack' with
         | [] -> out
-        | letter :: rack' ->
+        | tile :: rack' ->
             let out =
-                if Set.contains letter allowedLetters then
+                if Set.contains (tile |> snd |> fst) allowedLetters then
                     match (f
-                               letter
+                               tile
                                (rack
-                                |> List.removeAt (rack |> List.findIndex (fun c -> c.Equals(letter)))))
+                                |> List.removeAt (rack |> List.findIndex (fun c -> c.Equals(tile)))))
                         with
                     | [] -> out
                     | plays -> plays :: out
@@ -67,7 +67,7 @@ let loopRack (f: char -> char list -> 'a list) (rack: char list) (allowedLetters
 
     aux rack allowedLetters []
 
-let nextArc (c: char) (arc: Dictionary.Dict) = Dictionary.step c arc
+let nextArc (c: (uint32 * (char * int))) (arc: Dictionary.Dict) = Dictionary.step (c |> snd |> fst) arc
 
 let getNextCoordinate (pos: coord) (offset: int32) (dir: Direction) =
     match dir with
@@ -80,13 +80,13 @@ let goOn
     (anchor: coord)
     (pos: int32)
     (direction: Direction)
-    (l: char)
-    (word: char list)
-    (rack: char list)
+    (l: (uint32 * (char * int)))
+    (word: (uint32 * (char * int)) list)
+    (rack: (uint32 * (char * int)) list)
     (newArc: (bool * Dictionary.Dict) option)
     (oldArc: Dictionary.Dict)
-    (plays: (coord * char) list)
-    : (coord * char) list =
+    (plays: (coord * (uint32 * (char * int))) list)
+    : (coord * (uint32 * (char * int))) list =
     let leftCoord = getNextCoordinate anchor (pos - 1) direction
     let rightCoord = getNextCoordinate anchor (pos + 1) direction
 
@@ -110,17 +110,15 @@ let goOn
             printf "%A - %A - %A - %A\n" anchor newArc word rack
             // let newArc = Dictionary.reverse newArc |> Option.get |> snd // TODO: This is ugly, and possibly unsafe
 
-            let tempArc = Dictionary.reverse newArc
-
-            if tempArc = None then []
-            else 
-                let newArc = tempArc |> Option.get |> snd
+            match (Dictionary.reverse newArc) with
+            | None -> []
+            | Some ((_, newArc)) ->
                 if roomToTheLeft && roomToTheRight then
                     genAux state anchor 1 direction word rack newArc plays
                 else
                     []
         | None ->
-            printf "Not on old arc: offset: %d, (%d, %d) %c\n" pos (anchor |> fst) (anchor |> snd) l // TODO: No clue if this ever happens, or how to handle it
+            printf "Not on old arc: offset: %d, (%d, %d) %c\n" pos (anchor |> fst) (anchor |> snd) (l |> snd |> fst) // TODO: No clue if this ever happens, or how to handle it
             []
     else
         let word = word @ [ l ]
@@ -133,7 +131,7 @@ let goOn
                 |> genAux state anchor (pos + 1) direction word rack newArc
             | false -> []
         | None ->
-            printf "Not on old arc: offset: %d, (%d, %d) %c\n" pos (anchor |> fst) (anchor |> snd) l // TODO: No clue if this ever happens, or how to handle it
+            printf "Not on old arc: offset: %d, (%d, %d) %c\n" pos (anchor |> fst) (anchor |> snd) (l |> snd |> fst) // TODO: No clue if this ever happens, or how to handle it
             []
 
 let rec genAux
@@ -141,13 +139,13 @@ let rec genAux
     (anchor: ScrabbleUtil.coord)
     (pos: int32)
     (direction: Direction)
-    (word: char list)
-    (rack: char list)
+    (word: (uint32 * (char * int)) list)
+    (rack: (uint32 * (char * int)) list)
     (arc: Dictionary.Dict)
-    (plays: (coord * char) list)
-    : (coord * char) list =
+    (plays: (coord * (uint32 * (char * int))) list)
+    : (coord * (uint32 * (char * int))) list =
     match getLetter (getNextCoordinate anchor pos direction) state with
-    | Some (c, _) -> goOn (genAux) state anchor pos direction c word rack (nextArc c arc) arc plays
+    | Some c -> goOn (genAux) state anchor pos direction c word rack (nextArc c arc) arc plays
     | _ when rack.IsEmpty -> plays
     | None ->
         let allowedLetters = getAllowedLetters arc
@@ -166,10 +164,10 @@ let rec genAux
 
 // TODO: Handle blanks
 
-let gen (state: State.state) (pieces: Map<uint32, ScrabbleUtil.tile>) (startPos: coord) (dir: Direction) : (coord * char) list =
+let gen (state: State.state) (pieces: Map<uint32, ScrabbleUtil.tile>) (startPos: coord) (dir: Direction) : (coord * (uint32 * (char * int))) list =
     
     let pos = 0 // Should always be 0 when starting
-    let word: char list = List.Empty
+    let word = List.Empty
     let rack = getRack state pieces // Retrieve our current hand
     let initArc = state.dict
 
@@ -179,21 +177,91 @@ let gen (state: State.state) (pieces: Map<uint32, ScrabbleUtil.tile>) (startPos:
 
 let getNextMove (st: state) (pieces: Map<uint32, tile>) =
 
-    let createAsyncMoveCalculation coord dir  =
+    let createAsyncMoveCalculation coord dir =
         async {
             let result = gen st pieces coord dir
-            return result;
-        } 
+            return result
+        }
 
-    let asyncCalculation = 
+    let asyncCalculation =
         st.tilePlacement
-        |> Map.toList 
-        |> List.fold (fun acc (coord, _) -> [(createAsyncMoveCalculation coord Horizontal)] @ acc |> (@) [(createAsyncMoveCalculation coord Vertical)]) List.Empty
+        |> Map.toList
+        |> List.fold
+            (fun acc (coord, _) ->
+                [ (createAsyncMoveCalculation coord Horizontal) ]
+                @ acc
+                |> (@) [ (createAsyncMoveCalculation coord Vertical) ])
+            List.Empty
         |> Async.Parallel
-    
-    let possibleWords = 
+
+    let possibleWords =
         Async.RunSynchronously asyncCalculation
         |> Array.filter (fun word -> not <| List.isEmpty word)
     
     if possibleWords.Length = 0 then None
     else Some (possibleWords[0])
+
+let testCoord (st: state) (coord: coord) = hasLetter coord st.tilePlacement
+
+let validateDirection (st: state) (direction: Direction) (coord: coord) (dict: Dictionary.Dict) (valid: bool) =
+    // Go backwards from coordinate
+    // if you hit a blank spot, reverse direction
+    // then go forwards from the coordinate
+    // if you hit a blank spot, validate that it is a valid word
+
+    let auxGetNextOffset (offset: int32) =
+        if offset <= 0 then
+            offset - 1
+        else
+            offset + 1
+
+    let rec aux (offset: int32) (coord: coord) (dict: Dictionary.Dict) (valid: bool) =
+        match getLetter (getNextCoordinate coord offset direction) st with
+        | Some c ->
+            match nextArc c dict with
+            | Some (valid, newArc) -> aux (auxGetNextOffset offset) coord newArc valid
+            | None ->
+                printf "1. Can't go from %c at %A\n" (c |> snd |> fst) coord
+                false
+        | _ ->
+            if offset <= 0 then
+                // Switch direction
+                match Dictionary.reverse dict with
+                | Some (valid, newArc) -> aux 1 coord newArc valid
+                | None ->
+                    printf "2. Can't reverse at %A\n" coord
+                    false // TODO: Not entirely sure this is right, might have to use the valid value
+            else
+                printf "Falling back to valid at %A\n" coord
+                valid
+    // Start at -1 as the dictionary has already started at 0
+    aux -1 coord dict valid
+
+// Returns true if the move is valid, and false if it aint
+let validateMove (st: state) (pieces: Map<uint32, tile>) (move: (coord * (uint32 * (char * int))) list) =
+    // Move through each move
+    // Test in each direction, go through like normal. So go up then down, then left, then right.
+    // Each tested coord is added to the list of tested coords.
+    // If the coord you are about to touch is already in the list of tested coords, then you have already tested it.
+
+    let testAux st direction coord letter =
+        if testCoord st (getNextCoordinate coord 1 direction)
+           || testCoord st (getNextCoordinate coord (-1) direction) then
+            match nextArc letter st.dict with
+            | Some (valid, newArc) -> validateDirection st direction coord newArc valid
+            | None -> false
+        else
+            true
+
+    let rec aux move =
+        match move with
+        | [] -> true
+        | (coord, letter) :: rest ->
+            match testAux st Horizontal coord letter with
+            | true ->
+                match testAux st Vertical coord letter with
+                | true -> aux rest
+                | false -> false
+            | false -> false
+
+    aux move
