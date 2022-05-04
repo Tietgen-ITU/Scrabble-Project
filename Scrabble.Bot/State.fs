@@ -15,7 +15,7 @@ type state =
       hand: MultiSet.MultiSet<uint32>
       players: List<bool>
       playerTurn: uint32
-      tilePlacement: Map<coord, (char * int)> }
+      tilePlacement: Map<coord, (uint32 *(char * int))> }
 
 let mkState b d pn h pl pt =
     { board = b
@@ -24,7 +24,7 @@ let mkState b d pn h pl pt =
       hand = h
       players = pl
       playerTurn = pt
-      tilePlacement = Map.empty<coord, (char * int)>
+      tilePlacement = Map.empty<coord, (uint32 *(char * int))>
       points = [ for i in 1 .. pl.Length -> 0 ] }
 
 let removePlayer st playerIdToRemove =
@@ -50,7 +50,7 @@ let addPoints (playerId: uint32) points st =
 
 let private (|FoundValue|_|) key map = Map.tryFind key map
 
-let placeLetter (tile: (char * int)) (st: state) (coordinate: coord) =
+let placeLetter (tile: (uint32 * (char * int))) (st: state) (coordinate: coord) =
     // TODO: Place them on the board as well... and not only in the new map
     match st.tilePlacement with
     | FoundValue coordinate _ -> failwith "There is already a tile placed at that coordinate"
