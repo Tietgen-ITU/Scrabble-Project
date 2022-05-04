@@ -194,8 +194,6 @@ let getNextMove (st: state) (pieces: Map<uint32, tile>) =
     let possibleWords = 
         Async.RunSynchronously asyncCalculation
         |> Array.filter (fun word -> not <| List.isEmpty word)
-
-    Array.iter (fun a -> printf "%A" a) possibleWords
-
+    
     if possibleWords.Length = 0 then List.Empty
     else possibleWords[0]
