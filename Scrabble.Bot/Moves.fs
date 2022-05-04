@@ -176,8 +176,7 @@ let getNextMove (st: state) (pieces: Map<uint32, tile>) =
     let createAsyncMoveCalculation coord dir  =
         async {
             let result = gen st pieces coord dir
-            // return result;
-            return List.empty<coord * char>
+            return result;
         } 
 
     let asyncCalculation = 
