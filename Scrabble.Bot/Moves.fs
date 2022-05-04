@@ -107,12 +107,18 @@ let goOn
                 | false -> []
 
             // SwiExactly how these types, squares, and boards are used will be made clear in the inividual assignments.tch direction
-            let newArc = Dictionary.reverse newArc |> Option.get |> snd // TODO: This is ugly, and possibly unsafe
+            printf "%A - %A - %A - %A\n" anchor newArc word rack
+            // let newArc = Dictionary.reverse newArc |> Option.get |> snd // TODO: This is ugly, and possibly unsafe
 
-            if roomToTheLeft && roomToTheRight then
-                genAux state anchor 1 direction word rack newArc plays
-            else
-                []
+            let tempArc = Dictionary.reverse newArc
+
+            if tempArc = None then []
+            else 
+                let newArc = tempArc |> Option.get |> snd
+                if roomToTheLeft && roomToTheRight then
+                    genAux state anchor 1 direction word rack newArc plays
+                else
+                    []
         | None ->
             printf "Not on old arc: offset: %d, (%d, %d) %c\n" pos (anchor |> fst) (anchor |> snd) l // TODO: No clue if this ever happens, or how to handle it
             []
@@ -185,7 +191,11 @@ let getNextMove (st: state) (pieces: Map<uint32, tile>) =
         |> List.fold (fun acc (coord, _) -> [(createAsyncMoveCalculation coord Horizontal)] @ acc |> (@) [(createAsyncMoveCalculation coord Vertical)]) List.Empty
         |> Async.Parallel
     
-    let possibleWords = Async.RunSynchronously asyncCalculation
+    let possibleWords = 
+        Async.RunSynchronously asyncCalculation
+        |> Array.filter (fun word -> not <| List.isEmpty word)
+
+    Array.iter (fun a -> printf "%A" a) possibleWords
 
     if possibleWords.Length = 0 then List.Empty
     else possibleWords[0]
