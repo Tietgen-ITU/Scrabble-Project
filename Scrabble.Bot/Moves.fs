@@ -224,21 +224,28 @@ let getNextMove (st: state) (pieces: Map<uint32, tile>) =
             return result
         }
 
-    let asyncCalculation =
-        st.tilePlacement
-        |> Map.toList
-        |> List.fold
-            (fun acc (coord, _) ->
-                [ (createAsyncMoveCalculation coord Horizontal) ]
-                @ acc
-                |> (@) [ (createAsyncMoveCalculation coord Vertical) ])
-            List.Empty
-        |> Async.Parallel
-
     let possibleWords =
-        Async.RunSynchronously asyncCalculation
-        |> Array.fold (fun acc words -> acc @ words) List.Empty
-        |> List.filter (fun word -> not <| List.isEmpty word)
+        if st.tilePlacement.IsEmpty then
+            gen st pieces (0, 0) Horizontal
+        else
+            let asyncCalculation =
+                st.tilePlacement
+                |> Map.toList
+                |> List.fold
+                    (fun acc (coord, _) ->
+                        [ (createAsyncMoveCalculation coord Horizontal) ]
+                        @ acc
+                        |> (@) [ (createAsyncMoveCalculation coord Vertical) ])
+                    List.Empty
+                |> Async.Parallel
+
+            Async.RunSynchronously asyncCalculation
+            |> Array.fold (fun acc words -> acc @ words) List.Empty
+            |> List.filter (fun word -> not <| List.isEmpty word)
+            |> List.sortByDescending (fun word -> word |> List.length)
+
+    // TODO: This might slow us down
+    List.iter (fun x -> debugPrint (sprintf "Word: %s\n" (List.map snd x |> listToString))) possibleWords
 
     if possibleWords.Length = 0 then
         None
