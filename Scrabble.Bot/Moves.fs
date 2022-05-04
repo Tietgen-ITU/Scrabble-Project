@@ -136,6 +136,9 @@ let goOn
             printf "Not on old arc: offset: %d, (%d, %d) %c\n" pos (anchor |> fst) (anchor |> snd) l // TODO: No clue if this ever happens, or how to handle it
             []
 
+let findHighestPoints (state: State.state) (possiblePlays: ((coord * char) list) list) : (coord * char) list = 
+    List.
+
 let rec genAux
     (state: State.state)
     (anchor: ScrabbleUtil.coord)
@@ -162,7 +165,7 @@ let rec genAux
         | [] ->
             printf "Cannot play: %s\n" (listToString word)
             []
-        | play :: _ -> play
+        | _ -> findHighestPoints state possiblePlays
 
 // TODO: Handle blanks
 
