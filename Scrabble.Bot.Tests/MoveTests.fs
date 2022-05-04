@@ -74,6 +74,7 @@ let playWord () =
                           ((0, 4), ('E', 1)) ])
             state
 
-    gen state pieces
-
-    Assert.IsTrue(true)
+    let res = gen state pieces
+    Assert.AreEqual(((1, 0), 'A'), res |> List.item 0)
+    Assert.AreEqual(((2, 0), 'R'), res |> List.item 1)
+    Assert.AreEqual(((3, 0), 'E'), res |> List.item 2)
