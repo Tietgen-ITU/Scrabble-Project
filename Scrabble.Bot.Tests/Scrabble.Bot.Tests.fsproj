@@ -8,8 +8,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!--<Compile Include="DictTests.fs" />
-    <Compile Include="MultiSetTests.fs" />-->
+    <Compile Include="DictTests.fs" />
+    <Compile Include="MultiSetTests.fs" />
     <Compile Include="MoveTests.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
