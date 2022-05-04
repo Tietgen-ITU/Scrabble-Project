@@ -43,7 +43,12 @@ let removeTileFromHand st tileId =
 let removeTilesFromHand (tileIds: List<uint32>) st =
     List.fold (fun acc tileId -> removeTileFromHand acc tileId) st tileIds
 
-let addTileToHand st tile = { st with hand = st.hand.Add tile }
+let addTileToHand st (tileId , (amount:uint32)) = 
+    let rec aux ms id = function 
+        | 0u -> ms
+        | x -> aux (MultiSet.addSingle id ms) tileId (x-1u)
+
+    { st with hand = (aux st.hand tileId amount) }
 
 let addPoints (playerId: uint32) points st =
     { st with points = List.updateAt (int playerId - 1) (points + (st.points.Item(int playerId - 1))) st.points }

@@ -47,7 +47,9 @@ module Scrabble =
             
             if st.playerTurn = st.playerId then
                 let move = 
-                    match  Moves.getNextMove st pieces with
+
+                    let mv = Moves.getNextMove st pieces
+                    match mv with
                     | Some a -> SMPlay a
                     | None -> SMPass
 
