@@ -13,6 +13,7 @@
         | IndexOutOfBounds of int
         | DivisionByZero 
         | ReservedName of string
+        | EmptyStack
 
     val mkState : (string * int) list -> (char * int) list -> string list -> State
 

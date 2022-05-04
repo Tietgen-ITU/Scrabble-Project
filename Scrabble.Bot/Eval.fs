@@ -1,8 +1,40 @@
-﻿// Insert your updated Eval.fs file here from Assignment 7. All modules must be internal.
-
-module internal Eval
+﻿module internal Eval
 
 open StateMonad
+
+(* Code for testing *)
+
+let hello =
+    [ ('H', 4)
+      ('E', 1)
+      ('L', 1)
+      ('L', 1)
+      ('O', 1) ]
+
+let state =
+    mkState [ ("x", 5); ("y", 42) ] hello [ "_pos_"; "_result_" ]
+
+let emptyState = mkState [] [] []
+
+let arith (a: SM<int>) (b: SM<int>) (f: (int -> int -> int)) =
+    a >>= (fun x -> b >>= (fun y -> ret (f x y)))
+
+let add (a: SM<int>) (b: SM<int>) : SM<int> = arith a b (fun x y -> x + y)
+let sub (a: SM<int>) (b: SM<int>) : SM<int> = arith a b (fun x y -> x - y)
+let mul (a: SM<int>) (b: SM<int>) : SM<int> = arith a b (fun x y -> x * y)
+
+let arith0Sens (a: SM<int>) (b: SM<int>) (f: (int -> int -> int)) =
+    a
+    >>= (fun x ->
+        b
+        >>= (fun y ->
+            if y = 0 then
+                fail DivisionByZero
+            else
+                ret (f x y)))
+
+let div a b = arith0Sens a b (fun x y -> x / y)
+let modulo a b = arith0Sens a b (fun x y -> x % y)
 
 type aExp =
     | N of int
@@ -64,83 +96,63 @@ let (.>.) a b =
     ~~(a .=. b)
     .&&. (a .>=. b) (* numeric greater than *)
 
-let binop f a b =
-    a >>= (fun x -> b >>= fun y -> ret (f x y))
-
-let add a b = binop (+) a b
-
-let div a b =
-    a
-    >>= (fun x ->
-        b
-        >>= fun y ->
-                match y with
-                | v when v = 0 -> fail DivisionByZero
-                | v -> ret (x / v))
-
-let isVowel c =
-    match System.Char.ToUpper c with
-    | 'A'
-    | 'E'
-    | 'I'
-    | 'O'
-    | 'U' -> true
-    | _ -> false
-
 let rec arithEval a : SM<int> =
     match a with
     | N n -> ret n
-    | V str -> lookup str
+    | V v -> lookup v
     | WL -> wordLength
-    | PV a -> arithEval a >>= pointValue
+    | PV p -> arithEval p >>= (fun x -> pointValue x)
     | Add (a, b) -> add (arithEval a) (arithEval b)
-    | Sub (a, b) -> binop (-) (arithEval a) (arithEval b)
-    | Mul (a, b) -> binop (*) (arithEval a) (arithEval b)
+    | Sub (a, b) -> sub (arithEval a) (arithEval b)
+    | Mul (a, b) -> mul (arithEval a) (arithEval b)
     | Div (a, b) -> div (arithEval a) (arithEval b)
-    | Mod (a, b) ->
-        arithEval a
-        >>= (fun x ->
-            arithEval b
-            >>= fun y ->
-                    match y with
-                    | v when v = 0 -> fail DivisionByZero
-                    | v -> ret (x % v))
-    | CharToInt c ->
-        charEval c
-        >>= fun x -> ret (System.Convert.ToInt32 x)
+    | Mod (a, b) -> modulo (arithEval a) (arithEval b)
+    | CharToInt (c) -> charEval c >>= (fun x -> ret (int x))
 
 and charEval c : SM<char> =
     match c with
     | C c -> ret c
-    | CV a -> arithEval a >>= characterValue
+    | CV v -> arithEval v >>= (fun x -> characterValue x)
     | ToUpper c ->
         charEval c
-        >>= fun a -> ret (System.Char.ToUpper a)
+        >>= (fun x -> ret (System.Char.ToUpper x))
     | ToLower c ->
         charEval c
-        >>= fun a -> ret (System.Char.ToLower a)
-    | IntToChar a ->
-        arithEval a
-        >>= fun b -> ret (System.Convert.ToChar b)
+        >>= (fun x -> ret (System.Char.ToLower x))
+    | IntToChar i -> arithEval i >>= (fun x -> ret (char x))
+
+let numericComparison (a: aExp) (b: aExp) (f: (int -> int -> bool)) : SM<bool> =
+    arithEval a
+    >>= (fun x -> arithEval b >>= (fun y -> ret (f x y)))
+
+let isVowel (c: char) : bool =
+    match System.Char.ToLower(c) with
+    | 'a'
+    | 'e'
+    | 'i'
+    | 'o'
+    | 'u' -> true
+    | _ -> false
+
 
 let rec boolEval b : SM<bool> =
     match b with
     | TT -> ret true
     | FF -> ret false
-
-    | AEq (a, b) -> binop (=) (arithEval a) (arithEval b)
-    | ALt (a, b) -> binop (<) (arithEval a) (arithEval b)
-
-    | Not b -> boolEval b >>= fun e -> ret (not (e))
-    | Conj (a, b) -> binop (&&) (boolEval a) (boolEval b)
-
-    | IsVowel c -> charEval c >>= fun a -> ret (isVowel a)
+    | AEq (a, b) -> numericComparison a b (fun x y -> x = y)
+    | ALt (a, b) -> numericComparison a b (fun x y -> x < y)
+    | Not b -> boolEval b >>= (fun x -> ret (not x))
+    | Conj (b1, b2) ->
+        boolEval b1
+        >>= (fun x -> boolEval b2 >>= (fun y -> ret (x && y)))
+    | IsVowel c -> charEval c >>= (fun x -> ret (isVowel x))
     | IsLetter c ->
         charEval c
-        >>= fun a -> ret (System.Char.IsLetter a)
+        >>= (fun x -> ret (System.Char.IsLetter x))
     | IsDigit c ->
         charEval c
-        >>= fun a -> ret (System.Char.IsDigit a)
+        >>= (fun x -> ret (System.Char.IsDigit x))
+
 
 type stm =
     (* statements *)
@@ -153,22 +165,26 @@ type stm =
 
 let rec stmntEval stmnt : SM<unit> =
     match stmnt with
-    | Declare str -> declare str
-    | Ass (str, exp) ->
-        declare str >>>= arithEval exp
-        >>= (fun vl -> update str vl)
+    | Declare v -> declare v
+    | Ass (v, a) -> arithEval a >>= (fun x -> update v x)
     | Skip -> ret ()
-    | Seq (s1, s2) -> stmntEval s1 >>>= stmntEval s2
-    | ITE (exp, s1, s2) ->
-        boolEval exp
-        >>= fun b -> if b then stmntEval s1 else stmntEval s2
-    | While (exp, stm) ->
-        boolEval exp
-        >>= fun b ->
-                if b then
-                    stmntEval stm >>>= stmntEval stmnt
-                else
-                    ret ()
+    | Seq (s1, s2) -> stmntEval s1 >>= (fun _ -> stmntEval s2)
+    | ITE (b, s1, s2) ->
+        boolEval b
+        >>= (fun x ->
+            push
+            >>>= (if x then stmntEval s1 else stmntEval s2)
+            >>>= pop)
+    | While (b, s) ->
+        boolEval b
+        >>= (fun x ->
+            push
+            >>>= (if x then
+                      stmntEval s >>= (fun _ -> stmntEval (While(b, s)))
+                  else
+                      ret ())
+            >>>= pop)
+
 
 (* Part 3 (Optional) *)
 type StateBuilder() =
@@ -181,127 +197,129 @@ type StateBuilder() =
 
 let prog = new StateBuilder()
 
-let rec arithEval2 a =
-    match a with
-    | N n -> prog { return n }
-    | V str -> prog { return! lookup str }
-    | WL -> prog { return! wordLength }
-    | PV a ->
-        prog {
-            let! x = arithEval a
-            return! pointValue x
-        }
-    | Add (a, b) -> prog { return! add (arithEval2 a) (arithEval2 a) }
-    | Sub (a, b) -> prog { return! binop (-) (arithEval2 a) (arithEval2 a) }
-    | Mul (a, b) -> prog { return! binop (*) (arithEval2 a) (arithEval2 a) }
-    | Div (a, b) -> prog { return! div (arithEval2 a) (arithEval2 a) }
-    | Mod (a, b) ->
-        prog {
+let rec arithEval2 (a: aExp) : SM<int> =
+    prog {
+        match a with
+        | N n -> return n
+        | V v ->
+            let! x = lookup v
+            return x
+        | WL ->
+            let! wl = wordLength
+            return wl
+        | PV p ->
+            let! x = arithEval2 p
+            let! pv = pointValue x
+            return pv
+        | Add (a, b) ->
             let! x = arithEval2 a
             let! y = arithEval2 b
-
-            if y = 0 then
-                return! fail DivisionByZero
-            else
-                return (x % y)
-        }
-    | CharToInt c ->
-        prog {
+            return x + y
+        | Sub (a, b) ->
+            let! x = arithEval2 a
+            let! y = arithEval2 b
+            return x - y
+        | Mul (a, b) ->
+            let! x = arithEval2 a
+            let! y = arithEval2 b
+            return x * y
+        | Div (a, b) ->
+            let x = arithEval2 a
+            let y = arithEval2 b
+            return! arith0Sens x y (fun x y -> x / y)
+        | Mod (a, b) ->
+            let x = arithEval2 a
+            let y = arithEval2 b
+            return! arith0Sens x y (fun x y -> x % y)
+        | CharToInt (c) ->
             let! x = charEval2 c
-            return System.Convert.ToInt32((char) x)
-        }
+            return int x
+    }
 
 and charEval2 c =
-    match c with
-    | C c -> prog { return c }
-    | CV a ->
-        prog {
-            let! x = arithEval2 a
+    prog {
+        match c with
+        | C c -> return c
+        | CV v ->
+            let! x = arithEval2 v
             return! characterValue x
-        }
-    | ToUpper c ->
-        prog {
+        | ToUpper c ->
             let! x = charEval2 c
             return System.Char.ToUpper x
-        }
-    | ToLower c ->
-        prog {
+        | ToLower c ->
             let! x = charEval2 c
             return System.Char.ToLower x
-        }
-    | IntToChar a ->
-        prog {
-            let! x = arithEval2 a
-            return System.Convert.ToChar x
-        }
+        | IntToChar i ->
+            let! x = arithEval2 i
+            return char x
+    }
 
 let rec boolEval2 b =
-    match b with
-    | TT -> prog { return true }
-    | FF -> prog { return true }
-
-    | AEq (a, b) -> prog { return! binop (=) (arithEval2 a) (arithEval2 b) }
-    | ALt (a, b) -> prog { return! binop (<) (arithEval2 a) (arithEval2 b) }
-
-    | Not b ->
-        prog {
+    prog {
+        match b with
+        | TT -> return true
+        | FF -> return false
+        | AEq (a, b) ->
+            let! x = arithEval2 a
+            let! y = arithEval2 b
+            return x = y
+        | ALt (a, b) ->
+            let! x = arithEval2 a
+            let! y = arithEval2 b
+            return x < y
+        | Not b ->
             let! x = boolEval2 b
-            return (not (x))
-        }
-    | Conj (a, b) -> prog { return! binop (&&) (boolEval2 a) (boolEval2 b) }
-
-    | IsVowel c ->
-        prog {
+            return not x
+        | Conj (b1, b2) ->
+            let! x = boolEval2 b1
+            let! y = boolEval2 b2
+            return x && y
+        | IsVowel c ->
             let! x = charEval2 c
             return isVowel x
-        }
-    | IsLetter c ->
-        prog {
+        | IsLetter c ->
             let! x = charEval2 c
-            return (System.Char.IsLetter x)
-        }
-    | IsDigit c ->
-        prog {
+            return System.Char.IsLetter x
+        | IsDigit c ->
             let! x = charEval2 c
-            return (System.Char.IsDigit x)
-        }
+            return System.Char.IsDigit x
+    }
 
 let rec stmntEval2 stm =
-    match stm with
-    | Declare str -> prog { return! declare str }
-    | Ass (str, exp) ->
-        prog {
-            let _ = declare str
-            let! x = arithEval2 exp
-            return! update str x
-        }
-    | Skip -> prog { return () }
-    | Seq (s1, s2) ->
-        prog {
-            let! x = stmntEval2 s1
-            return! stmntEval2 s2
-        }
-    | ITE (exp, s1, s2) ->
-        prog {
-            let! b = boolEval2 exp
+    prog {
+        match stm with
+        | Declare v -> do! declare v
+        | Ass (v, a) ->
+            let! x = arithEval2 a
+            do! update v x
+        | Skip -> return ()
+        | Seq (s1, s2) ->
+            do! stmntEval2 s1
+            do! stmntEval2 s2
+        | ITE (b, s1, s2) ->
+            let! x = boolEval2 b
+            do! push
 
-            if b then
-                return! stmntEval2 s1
+            if x then
+                do! stmntEval2 s1
             else
-                return! stmntEval2 s2
-        }
-    | While (exp, stm) ->
-        prog {
-            let! b = boolEval2 exp
+                do! stmntEval2 s2
 
-            if b then
-                let _ = stmntEval2 stm
-                return! stmntEval2 stm
+            do! pop
+        | While (b, s) ->
+            let! x = boolEval2 b
+
+            if x then
+                do! push
+                do! stmntEval2 s
+                do! pop
+                do! stmntEval2 (While(b, s))
             else
                 return ()
-        }
+    }
 
-(* Part 4 *)
+(* Part 4 (Optional) *)
+
 type word = (char * int) list
 type squareFun = word -> int -> int -> Result<int, Error>
 
