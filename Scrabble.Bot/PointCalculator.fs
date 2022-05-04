@@ -12,7 +12,7 @@ module internal PointCalculator =
 
     let private getResult defvalue = function
         | StateMonad.Success a -> a
-        | _ -> defvalue
+        | StateMonad.Failure a -> printf "%A" a ; defvalue
 
     let calculateWordPoint (word : (coord * (char * int)) list) (board: Parser.board) : int = 
 
@@ -31,12 +31,14 @@ module internal PointCalculator =
                 - Sort the list above
                 - Fold the list to get one int result which is the point scored for that word
         *)
-        List.mapi (fun index (coord , _) -> mapToListFunc letters index (getSquare coord board.squares)) word
+        printf "%s\n" 
+        List.iteri (fun index value -> printf "%A" value) word
+
+        List.mapi(fun index (coord , _) -> mapToListFunc letters index (getSquare coord board.squares)) word
         |> List.fold (fun acc value -> value @ acc) List.Empty 
         |> List.sortByDescending (fun (priority , _) -> priority)  
         |> List.fold (fun acc (_,value) -> value acc |> getResult acc) 0
         
-
     
     
 
