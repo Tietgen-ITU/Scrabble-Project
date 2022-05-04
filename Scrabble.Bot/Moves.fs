@@ -19,12 +19,17 @@ let getRack (state: State.state) (pieces: Map<uint32, ScrabbleUtil.tile>) : (uin
             (Map.find piece pieces
              |> Set.toSeq
              |> Seq.head // FIXME: This doesn't handle blanks, which is good as that is supposed to be handled by the algorithm
-             |> fun a -> (piece, (a))) 
+             |> fun a -> (piece, (a)))
             :: rack)
         []
 
-let recordPlay (pos: coord) (c: (uint32 * (char * int))) (word: (uint32 * (char * int)) list) (plays: (coord * (uint32 * (char * int))) list) : (coord * (uint32 * (char * int))) list =
-    printf "Register play: (%d, %d) %A creating word: %s\n" (pos |> fst) (pos |> snd) c (listToString word)
+let recordPlay
+    (pos: coord)
+    (c: (uint32 * (char * int)))
+    (word: (uint32 * (char * int)) list)
+    (plays: (coord * (uint32 * (char * int))) list)
+    : (coord * (uint32 * (char * int))) list =
+    debugPrint (sprintf "Register play: (%d, %d) %A creating word: %s\n" (pos |> fst) (pos |> snd) c (listToString word))
 
     plays @ [ (pos, c) ]
 
@@ -46,7 +51,11 @@ let getAllowedLetters (dict: Dictionary.Dict) =
 
     aux dict alphabet Set.empty
 
-let loopRack (f: (uint32 * (char * int)) -> (uint32 * (char * int)) list -> 'a list) (rack: (uint32 * (char * int)) list) (allowedLetters: Set<char>) : 'a list list =
+let loopRack
+    (f: (uint32 * (char * int)) -> (uint32 * (char * int)) list -> 'a list)
+    (rack: (uint32 * (char * int)) list)
+    (allowedLetters: Set<char>)
+    : 'a list list =
     let rec aux (rack': (uint32 * (char * int)) list) (allowedLetters: Set<char>) (out: 'a list list) : 'a list list =
         match rack' with
         | [] -> out
@@ -107,7 +116,6 @@ let goOn
                 | false -> []
 
             // SwiExactly how these types, squares, and boards are used will be made clear in the inividual assignments.tch direction
-            printf "%A - %A - %A - %A\n" anchor newArc word rack
             // let newArc = Dictionary.reverse newArc |> Option.get |> snd // TODO: This is ugly, and possibly unsafe
 
             match (Dictionary.reverse newArc) with
@@ -118,7 +126,7 @@ let goOn
                 else
                     []
         | None ->
-            printf "Not on old arc: offset: %d, (%d, %d) %c\n" pos (anchor |> fst) (anchor |> snd) (l |> snd |> fst) // TODO: No clue if this ever happens, or how to handle it
+            debugPrint (sprintf "Not on old arc: offset: %d, (%d, %d) %c\n" pos (anchor |> fst) (anchor |> snd) (l |> snd |> fst)) // TODO: No clue if this ever happens, or how to handle it
             []
     else
         let word = word @ [ l ]
@@ -131,7 +139,7 @@ let goOn
                 |> genAux state anchor (pos + 1) direction word rack newArc
             | false -> []
         | None ->
-            printf "Not on old arc: offset: %d, (%d, %d) %c\n" pos (anchor |> fst) (anchor |> snd) (l |> snd |> fst) // TODO: No clue if this ever happens, or how to handle it
+            debugPrint (sprintf "Not on old arc: offset: %d, (%d, %d) %c\n" pos (anchor |> fst) (anchor |> snd) (l |> snd |> fst)) // TODO: No clue if this ever happens, or how to handle it
             []
 
 let rec genAux
@@ -158,14 +166,19 @@ let rec genAux
 
         match possiblePlays with
         | [] ->
-            printf "Cannot play: %s\n" (listToString word)
+            debugPrint (sprintf "Cannot play: %s\n" (listToString word))
             []
         | play :: _ -> play
 
 // TODO: Handle blanks
 
-let gen (state: State.state) (pieces: Map<uint32, ScrabbleUtil.tile>) (startPos: coord) (dir: Direction) : (coord * (uint32 * (char * int))) list =
-    
+let gen
+    (state: State.state)
+    (pieces: Map<uint32, ScrabbleUtil.tile>)
+    (startPos: coord)
+    (dir: Direction)
+    : (coord * (uint32 * (char * int))) list =
+
     let pos = 0 // Should always be 0 when starting
     let word = List.Empty
     let rack = getRack state pieces // Retrieve our current hand
@@ -197,9 +210,11 @@ let getNextMove (st: state) (pieces: Map<uint32, tile>) =
     let possibleWords =
         Async.RunSynchronously asyncCalculation
         |> Array.filter (fun word -> not <| List.isEmpty word)
-    
-    if possibleWords.Length = 0 then None
-    else Some (possibleWords[0])
+
+    if possibleWords.Length = 0 then
+        None
+    else
+        Some(possibleWords[0])
 
 let testCoord (st: state) (coord: coord) = hasLetter coord st.tilePlacement
 
@@ -221,7 +236,7 @@ let validateDirection (st: state) (direction: Direction) (coord: coord) (dict: D
             match nextArc c dict with
             | Some (valid, newArc) -> aux (auxGetNextOffset offset) coord newArc valid
             | None ->
-                printf "1. Can't go from %c at %A\n" (c |> snd |> fst) coord
+                debugPrint (sprintf "1. Can't go from %c at %A\n" (c |> snd |> fst) coord)
                 false
         | _ ->
             if offset <= 0 then
@@ -229,10 +244,10 @@ let validateDirection (st: state) (direction: Direction) (coord: coord) (dict: D
                 match Dictionary.reverse dict with
                 | Some (valid, newArc) -> aux 1 coord newArc valid
                 | None ->
-                    printf "2. Can't reverse at %A\n" coord
+                    debugPrint (sprintf "2. Can't reverse at %A\n" coord)
                     false // TODO: Not entirely sure this is right, might have to use the valid value
             else
-                printf "Falling back to valid at %A\n" coord
+                debugPrint (sprintf "Falling back to valid at %A\n" coord)
                 valid
     // Start at -1 as the dictionary has already started at 0
     aux -1 coord dict valid
