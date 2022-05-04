@@ -197,11 +197,9 @@ let getNextMove (st: state) (pieces: Map<uint32, tile>) =
     let possibleWords =
         Async.RunSynchronously asyncCalculation
         |> Array.filter (fun word -> not <| List.isEmpty word)
-
-    if possibleWords.Length = 0 then
-        List.Empty
-    else
-        possibleWords[0]
+    
+    if possibleWords.Length = 0 then None
+    else Some (possibleWords[0])
 
 let testCoord (st: state) (coord: coord) = hasLetter coord st.tilePlacement
 

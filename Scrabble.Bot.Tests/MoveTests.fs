@@ -80,9 +80,9 @@ let playWord () =
             state
 
     let res = getNextMove state pieces
-    Assert.AreEqual(((1, 0), (1u, ('A', 1))), res |> List.item 0)
-    Assert.AreEqual(((2, 0), (18u, ('R', 1))), res |> List.item 1)
-    Assert.AreEqual(((3, 0), (5u, ('E', 1))), res |> List.item 2)
+    Assert.AreEqual(((1, 0), (1u, ('A', 1))), res |> Option.get |> List.item 0)
+    Assert.AreEqual(((2, 0), (18u, ('R', 1))), res |> Option.get |> List.item 1)
+    Assert.AreEqual(((3, 0), (5u, ('E', 1))), res |> Option.get |> List.item 2)
 
 [<Test>]
 let invalidMove1 () =
