@@ -151,14 +151,33 @@ let rec genAux
 
 // TODO: Handle blanks
 
-let gen (state: State.state) (pieces: Map<uint32, ScrabbleUtil.tile>) =
-    let anchor: coord = (0, 0) // TODO: Find a way to determine this
+let gen (state: State.state) (pieces: Map<uint32, ScrabbleUtil.tile>) (startPos: coord) (dir: Direction) =
+    
     let pos = 0 // Should always be 0 when starting
-    let dir = Vertical // TODO: Find a way to determine this
-    let word: char list = []
+    let word: char list = List.Empty
     let rack = getRack state pieces // Retrieve our current hand
     let initArc = state.dict
 
-    genAux state anchor pos dir word rack initArc
+    genAux state startPos pos dir word rack initArc
 
     0 // Replace
+
+let getNextMove (st: state) (pieces: Map<uint32, tile>) =
+
+    let createAsyncMoveCalculation coord dir  =
+        async {
+            let result = gen st pieces coord dir
+            // return result;
+            return List.empty<coord * char>
+        } 
+
+    let asyncCalculation = 
+        st.tilePlacement
+        |> Map.toList 
+        |> List.fold (fun acc (coord, _) -> [(createAsyncMoveCalculation coord Horizontal)] @ acc |> (@) [(createAsyncMoveCalculation coord Vertical)]) List.Empty
+        |> Async.Parallel
+    
+    let possibleWords = Async.RunSynchronously asyncCalculation
+
+    if possibleWords.Length = 0 then List.Empty
+    else possibleWords[0]
