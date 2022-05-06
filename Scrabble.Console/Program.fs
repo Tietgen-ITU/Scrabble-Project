@@ -38,7 +38,8 @@ let main argv =
     //    let board      = ScrabbleUtil.HoleBoard.holeBoard ()
 //    let board      = ScrabbleUtil.InfiniteHoleBoard.infiniteHoleBoard ()
 
-    let words = readLines (System.IO.Path.Combine(AppContext.BaseDirectory, "Dictionaries/English.txt"))
+    let words =
+        readLines (System.IO.Path.Combine(AppContext.BaseDirectory, "Dictionaries/English.txt"))
 
     let handSize = 7u
     let timeout = None

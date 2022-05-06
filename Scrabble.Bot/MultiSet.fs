@@ -39,7 +39,12 @@
 
     let addSingle (a: 'a) (s: MultiSet<'a>) : MultiSet<'a> = add a 1u s
 
-    let remove (a: 'a) (n: uint32) (s: MultiSet<'a>) : MultiSet<'a> = set a (getOrDefault a s - n) s
+    let remove (a: 'a) (n: uint32) (s: MultiSet<'a>) : MultiSet<'a> = 
+        let s' = set a (getOrDefault a s - n) s 
+
+        match Map.tryFind a s' with
+        | Some 0u -> s'.Remove a
+        | _ -> s'
 
     let removeSingle (a: 'a) (s: MultiSet<'a>) : MultiSet<'a> = remove a 1u s
 

@@ -9,8 +9,12 @@ type Direction =
     | Horizontal
     | Vertical
 
+type Plays = ((coord * (uint32 * (char * int))) list * (coord * (uint32 * (char * int))) list list)
+
 let listToString (chars: (uint32 * (char * int)) list) =
     string (List.fold (fun (sb: StringBuilder) c -> sb.Append(char (c |> snd |> fst))) (new StringBuilder()) chars)
+
+let returnPlays (plays: Plays) : Plays = ([], plays |> snd)
 
 let getRack (state: State.state) (pieces: Map<uint32, ScrabbleUtil.tile>) : (uint32 * (char * int)) list =
     state.hand
@@ -27,11 +31,20 @@ let recordPlay
     (pos: coord)
     (c: (uint32 * (char * int)))
     (word: (uint32 * (char * int)) list)
-    (plays: (coord * (uint32 * (char * int))) list)
-    : (coord * (uint32 * (char * int))) list =
-    debugPrint (sprintf "Register play: (%d, %d) %A creating word: %s\n" (pos |> fst) (pos |> snd) c (listToString word))
+    (isWord: bool)
+    (plays: Plays)
+    : Plays =
+    debugPrint (
+        sprintf "Register play: (%d, %d) %A creating word: %s\n" (pos |> fst) (pos |> snd) c (listToString word)
+    )
 
-    plays @ [ (pos, c) ]
+    let played = (plays |> fst) @ [ (pos, c) ]
+
+    (played,
+     if isWord then
+         played :: (plays |> snd)
+     else
+         plays |> snd)
 
 let getLetter coordinate (state: State.state) =
     match state.tilePlacement.TryFind coordinate with
@@ -52,11 +65,11 @@ let getAllowedLetters (dict: Dictionary.Dict) =
     aux dict alphabet Set.empty
 
 let loopRack
-    (f: (uint32 * (char * int)) -> (uint32 * (char * int)) list -> 'a list)
+    (f: (uint32 * (char * int)) -> (uint32 * (char * int)) list -> Plays)
     (rack: (uint32 * (char * int)) list)
     (allowedLetters: Set<char>)
-    : 'a list list =
-    let rec aux (rack': (uint32 * (char * int)) list) (allowedLetters: Set<char>) (out: 'a list list) : 'a list list =
+    : Plays =
+    let rec aux (rack': (uint32 * (char * int)) list) (allowedLetters: Set<char>) (out: Plays) : Plays =
         match rack' with
         | [] -> out
         | tile :: rack' ->
@@ -67,14 +80,14 @@ let loopRack
                                (rack
                                 |> List.removeAt (rack |> List.findIndex (fun c -> c.Equals(tile)))))
                         with
-                    | [] -> out
-                    | plays -> plays :: out
+                    | (_, []) -> out
+                    | (_, plays) -> ([], plays @ (out |> snd))
                 else
                     out
 
             aux rack' allowedLetters out
 
-    aux rack allowedLetters []
+    aux rack allowedLetters ([], [])
 
 let nextArc (c: (uint32 * (char * int))) (arc: Dictionary.Dict) = Dictionary.step (c |> snd |> fst) arc
 
@@ -94,8 +107,8 @@ let goOn
     (rack: (uint32 * (char * int)) list)
     (newArc: (bool * Dictionary.Dict) option)
     (oldArc: Dictionary.Dict)
-    (plays: (coord * (uint32 * (char * int))) list)
-    : (coord * (uint32 * (char * int))) list =
+    (plays: Plays)
+    : Plays =
     let leftCoord = getNextCoordinate anchor (pos - 1) direction
     let rightCoord = getNextCoordinate anchor (pos + 1) direction
 
@@ -106,41 +119,57 @@ let goOn
         let word = [ l ] @ word
 
         match newArc with
-        | Some (_, newArc) -> // We are on the old arc
+        | Some (isWord, newArc) -> // We are on the old arc
             // Letter is on oldarc and there is no letter directly to the left
             let plays =
                 match roomToTheLeft with
                 | true ->
-                    recordPlay (getNextCoordinate anchor pos direction) l word plays
+                    recordPlay (getNextCoordinate anchor pos direction) l word isWord plays
                     |> genAux state anchor (pos - 1) direction word rack newArc
-                | false -> []
+                | false -> returnPlays plays
 
             // SwiExactly how these types, squares, and boards are used will be made clear in the inividual assignments.tch direction
             // let newArc = Dictionary.reverse newArc |> Option.get |> snd // TODO: This is ugly, and possibly unsafe
 
             match (Dictionary.reverse newArc) with
-            | None -> []
+            | None -> plays
             | Some ((_, newArc)) ->
                 if roomToTheLeft && roomToTheRight then
                     genAux state anchor 1 direction word rack newArc plays
                 else
-                    []
+                    returnPlays plays
         | None ->
-            debugPrint (sprintf "Not on old arc: offset: %d, (%d, %d) %c\n" pos (anchor |> fst) (anchor |> snd) (l |> snd |> fst)) // TODO: No clue if this ever happens, or how to handle it
-            []
+            debugPrint (
+                sprintf
+                    "Not on old arc: offset: %d, (%d, %d) %c\n"
+                    pos
+                    (anchor |> fst)
+                    (anchor |> snd)
+                    (l |> snd |> fst)
+            ) // TODO: No clue if this ever happens, or how to handle it
+
+            plays
     else
         let word = word @ [ l ]
 
         match newArc with
-        | Some (_, newArc) ->
+        | Some (isWord, newArc) ->
             match roomToTheRight with
             | true ->
-                recordPlay (getNextCoordinate anchor pos direction) l word plays
+                recordPlay (getNextCoordinate anchor pos direction) l word isWord plays
                 |> genAux state anchor (pos + 1) direction word rack newArc
-            | false -> []
+            | false -> plays
         | None ->
-            debugPrint (sprintf "Not on old arc: offset: %d, (%d, %d) %c\n" pos (anchor |> fst) (anchor |> snd) (l |> snd |> fst)) // TODO: No clue if this ever happens, or how to handle it
-            []
+            debugPrint (
+                sprintf
+                    "Not on old arc: offset: %d, (%d, %d) %c\n"
+                    pos
+                    (anchor |> fst)
+                    (anchor |> snd)
+                    (l |> snd |> fst)
+            ) // TODO: No clue if this ever happens, or how to handle it
+
+            returnPlays plays
 
 let rec genAux
     (state: State.state)
@@ -150,8 +179,8 @@ let rec genAux
     (word: (uint32 * (char * int)) list)
     (rack: (uint32 * (char * int)) list)
     (arc: Dictionary.Dict)
-    (plays: (coord * (uint32 * (char * int))) list)
-    : (coord * (uint32 * (char * int))) list =
+    (plays: Plays)
+    : Plays =
     match getLetter (getNextCoordinate anchor pos direction) state with
     | Some c -> goOn (genAux) state anchor pos direction c word rack (nextArc c arc) arc plays
     | _ when rack.IsEmpty -> plays
@@ -165,10 +194,10 @@ let rec genAux
                 allowedLetters
 
         match possiblePlays with
-        | [] ->
+        | (_, []) ->
             debugPrint (sprintf "Cannot play: %s\n" (listToString word))
-            []
-        | play :: _ -> play
+            returnPlays plays
+        | plays -> returnPlays plays
 
 // TODO: Handle blanks
 
@@ -177,16 +206,15 @@ let gen
     (pieces: Map<uint32, ScrabbleUtil.tile>)
     (startPos: coord)
     (dir: Direction)
-    : (coord * (uint32 * (char * int))) list =
+    : (coord * (uint32 * (char * int))) list list =
 
     let pos = 0 // Should always be 0 when starting
     let word = List.Empty
     let rack = getRack state pieces // Retrieve our current hand
     let initArc = state.dict
 
-    let res = genAux state startPos pos dir word rack initArc []
-
-    res
+    genAux state startPos pos dir word rack initArc ([], [])
+    |> snd
 
 let getNextMove (st: state) (pieces: Map<uint32, tile>) =
 
@@ -196,20 +224,28 @@ let getNextMove (st: state) (pieces: Map<uint32, tile>) =
             return result
         }
 
-    let asyncCalculation =
-        st.tilePlacement
-        |> Map.toList
-        |> List.fold
-            (fun acc (coord, _) ->
-                [ (createAsyncMoveCalculation coord Horizontal) ]
-                @ acc
-                |> (@) [ (createAsyncMoveCalculation coord Vertical) ])
-            List.Empty
-        |> Async.Parallel
-
     let possibleWords =
-        Async.RunSynchronously asyncCalculation
-        |> Array.filter (fun word -> not <| List.isEmpty word)
+        if st.tilePlacement.IsEmpty then
+            gen st pieces (0, 0) Horizontal
+        else
+            let asyncCalculation =
+                st.tilePlacement
+                |> Map.toList
+                |> List.fold
+                    (fun acc (coord, _) ->
+                        [ (createAsyncMoveCalculation coord Horizontal) ]
+                        @ acc
+                        |> (@) [ (createAsyncMoveCalculation coord Vertical) ])
+                    List.Empty
+                |> Async.Parallel
+
+            Async.RunSynchronously asyncCalculation
+            |> Array.fold (fun acc words -> acc @ words) List.Empty
+            |> List.filter (fun word -> not <| List.isEmpty word)
+            |> List.sortByDescending (fun word -> word |> List.length)
+
+    // TODO: This might slow us down
+    List.iter (fun x -> debugPrint (sprintf "Word: %s\n" (List.map snd x |> listToString))) possibleWords
 
     if possibleWords.Length = 0 then
         None
