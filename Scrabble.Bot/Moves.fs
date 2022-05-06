@@ -244,7 +244,7 @@ let rec genAux
         let possiblePlays =
             loopRack
                 (fun c rack' -> goOn (genAux) state anchor pos direction (getNormalPiece c) word rack' (nextArc (getNormalPiece c) arc) arc plays)
-                (rack |> List.filter (fun a -> not(isBlank a)))
+                rack
                 allowedLetters
 
         let possiblePlays =
