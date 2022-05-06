@@ -9,22 +9,57 @@ type Direction =
     | Horizontal
     | Vertical
 
+type Piece = 
+    | Normal of (uint32 * (char * int))
+    | Blank of (uint32 * Map<char, int>) 
+
 type Plays = ((coord * (uint32 * (char * int))) list * (coord * (uint32 * (char * int))) list list)
+
+let isBlank = function
+    | Normal _ -> false
+    | Blank _ -> true
+
+let hasBlank = 
+    List.exists (fun p -> isBlank p)
+
+let getNormalPiece = function
+    | Normal a -> a
+    | _ -> failwith "this is not a normal piece"
+
+let getPieceAsBlank = function
+    | Normal _ -> failwith "this is not a blank piece"
+    | Blank a -> a
+
+let pieceIsAllowed allowedLetters = function
+    | Normal (_, (ch, _)) -> Set.contains ch allowedLetters
+    | Blank _ -> true
+
+(*
+    Provides with a list of normal pieces. 
+    If the Piece is of type Blank then the blank will return a list of normal pieces with all the letters in the allowedLetters
+*)
+let getAllowedPieces allowedPieces = function
+    | Normal a -> [Normal a]
+    | Blank (id, _) -> Set.fold (fun acc piece -> Normal (id, (piece, 0)) :: acc) List.Empty allowedPieces
 
 let listToString (chars: (uint32 * (char * int)) list) =
     string (List.fold (fun (sb: StringBuilder) c -> sb.Append(char (c |> snd |> fst))) (new StringBuilder()) chars)
 
 let returnPlays (plays: Plays) : Plays = ([], plays |> snd)
 
-let getRack (state: State.state) (pieces: Map<uint32, ScrabbleUtil.tile>) : (uint32 * (char * int)) list =
+let getRack (state: State.state) (pieces: Map<uint32, ScrabbleUtil.tile>) : Piece list =
+    let convertToPiece pieceId a =
+        match pieceId with
+        | 0u -> Blank (pieceId, Map.ofSeq a)
+        | _ -> Normal (pieceId, Seq.head a)
+
+    let rec createPieces rack piece pieces = function
+        | 0u -> rack
+        | x -> createPieces ((Map.find piece pieces |> Set.toSeq |> convertToPiece piece ) :: rack) piece pieces (x-1u)
+
     state.hand
     |> MultiSet.fold
-        (fun rack piece _ ->
-            (Map.find piece pieces
-             |> Set.toSeq
-             |> Seq.head // FIXME: This doesn't handle blanks, which is good as that is supposed to be handled by the algorithm
-             |> fun a -> (piece, (a)))
-            :: rack)
+        (fun rack piece amount -> createPieces rack piece pieces amount)
         []
 
 let recordPlay
@@ -65,20 +100,20 @@ let getAllowedLetters (dict: Dictionary.Dict) =
     aux dict alphabet Set.empty
 
 let loopRack
-    (f: (uint32 * (char * int)) -> (uint32 * (char * int)) list -> Plays)
-    (rack: (uint32 * (char * int)) list)
+    (f: Piece -> Piece list -> Plays)
+    (rack: Piece list)
     (allowedLetters: Set<char>)
     : Plays =
-    let rec aux (rack': (uint32 * (char * int)) list) (allowedLetters: Set<char>) (out: Plays) : Plays =
+    let rec aux (rack': Piece list) (allowedLetters: Set<char>) (out: Plays) : Plays =
         match rack' with
         | [] -> out
         | tile :: rack' ->
             let out =
-                if Set.contains (tile |> snd |> fst) allowedLetters then
+                if not(isBlank tile) && pieceIsAllowed allowedLetters tile then
                     match (f
-                               tile
-                               (rack
-                                |> List.removeAt (rack |> List.findIndex (fun c -> c.Equals(tile)))))
+                            tile
+                            (rack
+                            |> List.removeAt (rack |> List.findIndex (fun c -> c.Equals(tile)))))
                         with
                     | (_, []) -> out
                     | (_, plays) -> ([], plays @ (out |> snd))
@@ -88,6 +123,25 @@ let loopRack
             aux rack' allowedLetters out
 
     aux rack allowedLetters ([], [])
+
+let loopBlank
+    (f: Piece -> Piece list -> Plays)
+    (blank: Piece)
+    (restOfTheRack: Piece list)
+    (allowedLetters: Set<char>) 
+    : Plays =
+    let rec aux r rack out : Plays =
+        match r with 
+        | [] -> out
+        | tile :: blank' -> 
+            let out = 
+                match (f tile rack) with
+                | (_, []) -> out
+                | (_, plays) -> ([], plays @ (out |> snd))
+
+            aux blank' rack out
+
+    aux (getAllowedPieces allowedLetters blank) restOfTheRack ([], [])
 
 let nextArc (c: (uint32 * (char * int))) (arc: Dictionary.Dict) = Dictionary.step (c |> snd |> fst) arc
 
@@ -104,7 +158,7 @@ let goOn
     (direction: Direction)
     (l: (uint32 * (char * int)))
     (word: (uint32 * (char * int)) list)
-    (rack: (uint32 * (char * int)) list)
+    (rack: Piece list)
     (newArc: (bool * Dictionary.Dict) option)
     (oldArc: Dictionary.Dict)
     (plays: Plays)
@@ -177,7 +231,7 @@ let rec genAux
     (pos: int32)
     (direction: Direction)
     (word: (uint32 * (char * int)) list)
-    (rack: (uint32 * (char * int)) list)
+    (rack: Piece list)
     (arc: Dictionary.Dict)
     (plays: Plays)
     : Plays =
@@ -189,17 +243,28 @@ let rec genAux
 
         let possiblePlays =
             loopRack
-                (fun c rack' -> goOn (genAux) state anchor pos direction c word rack' (nextArc c arc) arc plays)
-                rack
+                (fun c rack' -> goOn (genAux) state anchor pos direction (getNormalPiece c) word rack' (nextArc (getNormalPiece c) arc) arc plays)
+                (rack |> List.filter (fun a -> not(isBlank a)))
                 allowedLetters
 
+        let possiblePlays =
+            if hasBlank rack then
+                let blank = List.find isBlank rack
+                let remaining = List.removeAt (List.findIndex isBlank rack) rack 
+                let pl = (plays |> fst, possiblePlays |> snd)
+
+                loopBlank 
+                    (fun c r -> goOn (genAux) state anchor pos direction (getNormalPiece c) word r (nextArc (getNormalPiece c) arc) arc pl)
+                    blank
+                    remaining
+                    allowedLetters
+            else possiblePlays
+        
         match possiblePlays with
         | (_, []) ->
             debugPrint (sprintf "Cannot play: %s\n" (listToString word))
             returnPlays plays
         | plays -> returnPlays plays
-
-// TODO: Handle blanks
 
 let gen
     (state: State.state)
