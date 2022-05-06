@@ -110,6 +110,28 @@ let playWordDirect () =
     Assert.AreEqual(((3, 0), (5u, ('E', 1))), res |> List.head |> List.item 2)
 
 [<Test>]
+let playFirstWord () =
+    let (sorted, pieces) = getSortedAndPieces ()
+
+    let lookupTable = getLookuptable sorted
+
+    let state =
+        mockState [ getHandId 'A' lookupTable
+                    getHandId 'C' lookupTable
+                    getHandId 'R' lookupTable
+                    getHandId 'E' lookupTable ]
+
+    let state = State.placeLetters Seq.empty state
+
+    let res = getNextMove state pieces |> Option.get
+
+    printf "%A\n" res
+    Assert.AreEqual(((-2, 0), (3u, ('C', 3))), res |> List.item 2)
+    Assert.AreEqual(((-1, 0), (1u, ('A', 1))), res |> List.item 1)
+    Assert.AreEqual(((0, 0), (18u, ('R', 1))), res |> List.item 0)
+    Assert.AreEqual(((1, 0), (5u, ('E', 1))), res |> List.item 3)
+
+[<Test>]
 let invalidMove1 () =
     let (_, pieces) = getSortedAndPieces ()
     let state = mockState []
