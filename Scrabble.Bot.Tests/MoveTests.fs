@@ -220,3 +220,53 @@ let invalidMove5 () =
           ((3, 1), (5u, ('E', 1))) ]
 
     Assert.IsFalse(validateMove state pieces move)
+
+[<Test>]
+let playBlankWordDirect () =
+    let (sorted, pieces) = getSortedAndPieces ()
+
+    let state =
+        mockState [ 0u
+                    0u
+                    0u ]
+
+    let state =
+        State.placeLetters
+            (Seq.ofList [ ((0, 0), (3u, ('C', 1)))
+                          ((0, 1), (1u, ('A', 1)))
+                          ((0, 2), (2u, ('B', 1)))
+                          ((0, 3), (12u, ('L', 1)))
+                          ((0, 4), (5u, ('E', 1))) ])
+            state
+
+    let res = gen state pieces (0, 0) Vertical
+    Assert.AreEqual(((1, 0), (0u, ('A', 0))), res |> List.head |> List.item 0)
+    Assert.AreEqual(((2, 0), (0u, ('R', 0))), res |> List.head |> List.item 1)
+    Assert.AreEqual(((3, 0), (0u, ('E', 0))), res |> List.head |> List.item 2)
+
+[<Test>]
+let playBlankInMiddleWordDirect () =
+    let (sorted, pieces) = getSortedAndPieces ()
+
+    let lookupTable = getLookuptable sorted
+
+    let state =
+        mockState [ getHandId 'A' lookupTable
+                    0u
+                    getHandId 'E' lookupTable ]
+
+    let state =
+        State.placeLetters
+            (Seq.ofList [ ((0, 0), (3u, ('C', 1)))
+                          ((0, 1), (1u, ('A', 1)))
+                          ((0, 2), (2u, ('B', 1)))
+                          ((0, 3), (12u, ('L', 1)))
+                          ((0, 4), (5u, ('E', 1))) ])
+            state
+
+    let res = gen state pieces (0, 0) Vertical
+    printf "%A" res
+
+    Assert.AreEqual(((1, 0), (1u, ('A', 1))), res |> List.head |> List.item 0)
+    Assert.AreEqual(((2, 0), (0u, ('R', 0))), res |> List.head |> List.item 1)
+    Assert.AreEqual(((3, 0), (5u, ('E', 1))), res |> List.head |> List.item 2)
