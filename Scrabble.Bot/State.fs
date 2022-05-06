@@ -69,6 +69,13 @@ let hasLetter coordinate =
     | FoundValue coordinate _ -> true
     | _ -> false
 
+let hasSquare (board: Parser.board) coord =
+    match board.squares coord with
+    | StateMonad.Success a -> match a with
+                                                    | Some _ -> true
+                                                    | None -> false
+    | StateMonad.Failure _ -> false
+
 (*
     Updates the board with the function provided. This is created as there are a lot of different
     functions that both parses the board and does other stuff. So this is created as a more general purpose.
