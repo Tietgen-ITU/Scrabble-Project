@@ -61,6 +61,7 @@ let getSortedAndPieces () =
 
 [<Test>]
 let playWord () =
+    ScrabbleUtil.DebugPrint.toggleDebugPrint true // Change to false to supress debug output
     let (sorted, pieces) = getSortedAndPieces ()
 
     let lookupTable = getLookuptable sorted
@@ -104,7 +105,8 @@ let playWordDirect () =
                           ((0, 4), (5u, ('E', 1))) ])
             state
 
-    let res = gen state pieces (0, 0) Vertical
+    let res = gen state pieces (0, 0) Horizontal
+    printf "%A\n" res
     Assert.AreEqual(((1, 0), (1u, ('A', 1))), res |> List.head |> List.item 0)
     Assert.AreEqual(((2, 0), (18u, ('R', 1))), res |> List.head |> List.item 1)
     Assert.AreEqual(((3, 0), (5u, ('E', 1))), res |> List.head |> List.item 2)
@@ -126,10 +128,38 @@ let playFirstWord () =
     let res = getNextMove state pieces |> Option.get
 
     printf "%A\n" res
-    Assert.AreEqual(((-2, 0), (3u, ('C', 3))), res |> List.item 2)
-    Assert.AreEqual(((-1, 0), (1u, ('A', 1))), res |> List.item 1)
+    Assert.AreEqual(((0, -2), (3u, ('C', 3))), res |> List.item 2)
+    Assert.AreEqual(((0, -1), (1u, ('A', 1))), res |> List.item 1)
     Assert.AreEqual(((0, 0), (18u, ('R', 1))), res |> List.item 0)
-    Assert.AreEqual(((1, 0), (5u, ('E', 1))), res |> List.item 3)
+    Assert.AreEqual(((0, 1), (5u, ('E', 1))), res |> List.item 3)
+
+[<Test>]
+let playWordDirectValidate () =
+    let (sorted, pieces) = getSortedAndPieces ()
+
+    let lookupTable = getLookuptable sorted
+
+    let state =
+        mockState [ getHandId 'A' lookupTable
+                    getHandId 'R' lookupTable
+                    getHandId 'E' lookupTable ]
+
+    let state =
+        State.placeLetters
+            (Seq.ofList [ ((0, 0), (3u, ('C', 1)))
+                          ((0, 1), (1u, ('A', 1)))
+                          ((0, 2), (2u, ('B', 1)))
+                          ((0, 3), (12u, ('L', 1)))
+                          ((0, 4), (5u, ('E', 1))) ])
+            state
+
+    let move =
+        [ PlayedLetter((0, 0), (1u, ('C', 1)))
+          PlayLetter((1, 0), (1u, ('A', 1)))
+          PlayLetter((2, 0), (18u, ('R', 1)))
+          PlayLetter((3, 0), (5u, ('E', 1))) ]
+
+    Assert.IsTrue(validateMove state pieces move)
 
 [<Test>]
 let invalidMove1 () =
@@ -148,10 +178,10 @@ let invalidMove1 () =
             state
 
     let move =
-        [ ((1, -2), (3u, ('C', 1)))
-          ((1, -1), (1u, ('A', 1)))
-          ((1, 0), (18u, ('R', 1)))
-          ((1, 1), (5u, ('E', 1))) ]
+        [ PlayLetter((1, -2), (3u, ('C', 1)))
+          PlayLetter((1, -1), (1u, ('A', 1)))
+          PlayLetter((1, 0), (18u, ('R', 1)))
+          PlayLetter((1, 1), (5u, ('E', 1))) ]
 
     Assert.IsFalse(validateMove state pieces move)
 
@@ -169,10 +199,10 @@ let invalidMove2 () =
             state
 
     let move =
-        [ ((1, -2), (3u, ('C', 1)))
-          ((1, -1), (1u, ('A', 1)))
-          ((1, 0), (18u, ('R', 1)))
-          ((1, 1), (5u, ('E', 1))) ]
+        [ PlayLetter((1, -2), (3u, ('C', 1)))
+          PlayLetter((1, -1), (1u, ('A', 1)))
+          PlayLetter((1, 0), (18u, ('R', 1)))
+          PlayLetter((1, 1), (5u, ('E', 1))) ]
 
     Assert.IsFalse(validateMove state pieces move)
 
@@ -190,10 +220,10 @@ let invalidMove3 () =
             state
 
     let move =
-        [ ((0, -1), (3u, ('C', 1)))
-          ((1, -1), (1u, ('A', 1)))
-          ((2, -1), (18u, ('R', 1)))
-          ((3, -1), (5u, ('E', 1))) ]
+        [ PlayLetter((0, -1), (3u, ('C', 1)))
+          PlayLetter((1, -1), (1u, ('A', 1)))
+          PlayLetter((2, -1), (18u, ('R', 1)))
+          PlayLetter((3, -1), (5u, ('E', 1))) ]
 
     Assert.IsTrue(validateMove state pieces move)
 
@@ -212,9 +242,9 @@ let invalidMove4 () =
             state
 
     let move =
-        [ ((1, 1), (1u, ('A', 1)))
-          ((2, 1), (18u, ('R', 1)))
-          ((3, 1), (5u, ('E', 1))) ]
+        [ PlayLetter((1, 1), (1u, ('A', 1)))
+          PlayLetter((2, 1), (18u, ('R', 1)))
+          PlayLetter((3, 1), (5u, ('E', 1))) ]
 
     // "BARE" doesn't exist in the dictionary
     Assert.IsFalse(validateMove state pieces move)
@@ -237,8 +267,8 @@ let invalidMove5 () =
             state
 
     let move =
-        [ ((1, 1), (1u, ('A', 1)))
-          ((2, 1), (18u, ('R', 1)))
-          ((3, 1), (5u, ('E', 1))) ]
+        [ PlayLetter((1, 1), (1u, ('A', 1)))
+          PlayLetter((2, 1), (18u, ('R', 1)))
+          PlayLetter((3, 1), (5u, ('E', 1))) ]
 
     Assert.IsFalse(validateMove state pieces move)

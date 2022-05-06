@@ -7,7 +7,9 @@ type Direction =
     | Horizontal
     | Vertical
 
-type Move = ((coord * (uint32 * (char * int))))
+type Piece = (uint32 * (char * int))
+
+type Move = ((coord * Piece))
 
 type Play =
     | PlayLetter of Move
@@ -16,5 +18,5 @@ type Play =
 type Plays = (Play list * Play list list)
 
 val getNextMove: state -> Map<uint32, tile> -> Option<List<coord * (uint32 * (char * int))>>
-val validateMove: state -> Map<uint32, tile> -> List<coord * (uint32 * (char * int))> -> bool
+val validateMove: state -> Map<uint32, tile> -> List<Play> -> bool
 val gen: state -> Map<uint32, tile> -> coord -> Direction -> Move list list
