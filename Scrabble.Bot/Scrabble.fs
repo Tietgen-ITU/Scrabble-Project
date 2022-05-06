@@ -89,6 +89,9 @@ module Scrabble =
                 (*The player failed to make a move.. let the next player have the turn*)
                 let st' = State.changeTurn st
                 aux st'
+            | RCM (CMForfeit pid) -> 
+                let st' = State.removePlayer st (int pid)
+                aux st'
             | RCM a -> failwith (sprintf "not implmented: %A" a)
             | RGPE err ->
                 printfn "Gameplay Error:\n%A" err
