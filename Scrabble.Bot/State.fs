@@ -15,7 +15,7 @@ type state =
       hand: MultiSet.MultiSet<uint32>
       players: List<bool>
       playerTurn: uint32
-      tilePlacement: Map<coord, (uint32 *(char * int))> }
+      tilePlacement: Map<coord, (uint32 * (char * int))> }
 
 let mkState b d pn h pl pt =
     { board = b
@@ -24,7 +24,7 @@ let mkState b d pn h pl pt =
       hand = h
       players = pl
       playerTurn = pt
-      tilePlacement = Map.empty<coord, (uint32 *(char * int))>
+      tilePlacement = Map.empty<coord, (uint32 * (char * int))>
       points = [ for i in 1 .. pl.Length -> 0 ] }
 
 let removePlayer st playerIdToRemove =
@@ -43,10 +43,11 @@ let removeTileFromHand st tileId =
 let removeTilesFromHand (tileIds: List<uint32>) st =
     List.fold (fun acc tileId -> removeTileFromHand acc tileId) st tileIds
 
-let addTileToHand st (tileId , (amount:uint32)) = 
-    let rec aux ms id = function 
+let addTileToHand st (tileId, (amount: uint32)) =
+    let rec aux ms id =
+        function
         | 0u -> ms
-        | x -> aux (MultiSet.addSingle id ms) tileId (x-1u)
+        | x -> aux (MultiSet.addSingle id ms) tileId (x - 1u)
 
     { st with hand = (aux st.hand tileId amount) }
 
@@ -71,9 +72,10 @@ let hasLetter coordinate =
 
 let hasSquare (board: Parser.board) coord =
     match board.squares coord with
-    | StateMonad.Success a -> match a with
-                                                    | Some _ -> true
-                                                    | None -> false
+    | StateMonad.Success a ->
+        match a with
+        | Some _ -> true
+        | None -> false
     | StateMonad.Failure _ -> false
 
 (*
