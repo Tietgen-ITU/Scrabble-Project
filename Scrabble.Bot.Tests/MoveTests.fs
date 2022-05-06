@@ -291,7 +291,7 @@ let playBlankWordDirect () =
                           ((0, 4), (5u, ('E', 1))) ])
             state
 
-    let res = gen state pieces (0, 0) Vertical
+    let res = gen state pieces (0, 0) Horizontal
     Assert.AreEqual(((1, 0), (0u, ('A', 0))), res |> List.head |> List.item 0)
     Assert.AreEqual(((2, 0), (0u, ('R', 0))), res |> List.head |> List.item 1)
     Assert.AreEqual(((3, 0), (0u, ('E', 0))), res |> List.head |> List.item 2)
@@ -316,7 +316,7 @@ let playBlankInMiddleWordDirect () =
                           ((0, 4), (5u, ('E', 1))) ])
             state
 
-    let res = gen state pieces (0, 0) Vertical
+    let res = gen state pieces (0, 0) Horizontal
     printf "%A" res
 
     Assert.AreEqual(((1, 0), (1u, ('A', 1))), res |> List.head |> List.item 0)

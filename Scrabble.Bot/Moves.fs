@@ -263,13 +263,6 @@ let loopBlank
 
     aux (getAllowedPieces allowedLetters blank) restOfTheRack ([], [])
 
-let nextArc (c: (uint32 * (char * int))) (arc: Dictionary.Dict) = Dictionary.step (c |> snd |> fst) arc
-
-let getNextCoordinate (pos: coord) (offset: int32) (dir: Direction) =
-    match dir with
-    | Horizontal -> (pos |> fst, (pos |> snd) + offset)
-    | Vertical -> ((pos |> fst) + offset, pos |> snd)
-
 let goOn
     genAux // The genAux function defined below
     (st: State.state)
