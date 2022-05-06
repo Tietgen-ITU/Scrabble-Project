@@ -123,8 +123,8 @@ let goOn
     let leftCoord = getNextCoordinate anchor (pos - 1) direction
     let rightCoord = getNextCoordinate anchor (pos + 1) direction
 
-    let roomToTheLeft = not (hasLetter leftCoord state.tilePlacement)
-    let roomToTheRight = not (hasLetter rightCoord state.tilePlacement)
+    let roomToTheLeft = not ((hasLetter leftCoord state.tilePlacement) && hasSquare state.board leftCoord)
+    let roomToTheRight = not ((hasLetter rightCoord state.tilePlacement) && hasSquare state.board rightCoord)
 
     if pos <= 0 then // Moving left
         let word = [ l ] @ word

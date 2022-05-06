@@ -1,17 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
-
     <IsPackable>false</IsPackable>
     <GenerateProgramFile>false</GenerateProgramFile>
   </PropertyGroup>
-
   <ItemGroup>
-    <!--<Compile Include="DictTests.fs" />
+    <Compile Include="StateTests.fs" />
+    <Compile Include="DictTests.fs" />
     <Compile Include="MultiSetTests.fs" />
-    <Compile Include="PointCalculatorTests.fs" />-->
     <Compile Include="MoveTests.fs" />
+    <Compile Include="PointCalculatorTests.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>
@@ -24,13 +22,10 @@
     <PackageReference Include="coverlet.collector" Version="3.1.0" />
     <PackageReference Update="FSharp.Core" Version="6.0.3" />
   </ItemGroup>
-
   <ItemGroup>
     <Reference Include="../Scrabble.Dependencies/ScrabbleUtil.dll" />
- </ItemGroup>
-
+  </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Scrabble.Bot\Scrabble.Bot.fsproj" />
   </ItemGroup>
-
 </Project>

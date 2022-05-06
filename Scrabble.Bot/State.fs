@@ -38,7 +38,7 @@ let players st = st.players
 let playerTurn st = st.playerTurn
 
 let removeTileFromHand st tileId =
-    { st with hand = st.hand.Remove tileId }
+    { st with hand = MultiSet.removeSingle tileId st.hand }
 
 let removeTilesFromHand (tileIds: List<uint32>) st =
     List.fold (fun acc tileId -> removeTileFromHand acc tileId) st tileIds
@@ -68,6 +68,13 @@ let hasLetter coordinate =
     function
     | FoundValue coordinate _ -> true
     | _ -> false
+
+let hasSquare (board: Parser.board) coord =
+    match board.squares coord with
+    | StateMonad.Success a -> match a with
+                                                    | Some _ -> true
+                                                    | None -> false
+    | StateMonad.Failure _ -> false
 
 (*
     Updates the board with the function provided. This is created as there are a lot of different
