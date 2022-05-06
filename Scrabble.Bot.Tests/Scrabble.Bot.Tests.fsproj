@@ -8,8 +8,8 @@
     <Compile Include="StateTests.fs" />
     <Compile Include="DictTests.fs" />
     <Compile Include="MultiSetTests.fs" />
-    <Compile Include="MoveTests.fs" />
     <Compile Include="PointCalculatorTests.fs" />
+    <Compile Include="MoveTests.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>
