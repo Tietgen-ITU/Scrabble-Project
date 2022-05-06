@@ -57,8 +57,13 @@ let main argv =
     let (dictionary, time) =
         time (fun () -> ScrabbleUtil.Dictionary.mkDict words dictAPI)
 
-    let ourPlayers = [ ("De imperative banditter", dictionary, DIB.Scrabble.startGame) ]
+    let ourPlayers =
+        [ // ("De imperative banditter 1", dictionary, DIB.Scrabble.startGame)
+          // ("De imperative banditter 2", dictionary, DIB.Scrabble.startGame)
+          // ("De imperative banditter 3", dictionary, DIB.Scrabble.startGame)
+          ("De imperative banditter 4", dictionary, DIB.Scrabble.startGame) ]
 
+    // let otherPlayers = []
     let otherPlayers =
         spawnMultiples "OxyphenButazone" dictionary Oxyphenbutazone.Scrabble.startGame 3
 
