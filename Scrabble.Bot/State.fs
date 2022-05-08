@@ -90,7 +90,7 @@ let isBeginingOfWord pos orientation st =
 
     let adjacentCoord =
         match orientation with
-        | Vertical -> (pos |> fst, (pos |> snd) - 1)
+        | Vertical -> (pos |> fst, (pos |> snd) + 1)
         | Horizontal -> ((pos |> fst) - 1, pos |> snd)
 
     not(hasSquare st.board adjacentCoord) || not(hasLetter adjacentCoord st.tilePlacement)
