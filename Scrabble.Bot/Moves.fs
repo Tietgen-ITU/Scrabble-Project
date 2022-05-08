@@ -355,9 +355,14 @@ let getNextMove (st: state) (pieces: Map<uint32, tile>) =
                 |> Map.toList
                 |> List.fold
                     (fun acc (coord, _) ->
-                        [ (createAsyncMoveCalculation coord State.Horizontal) ]
-                        @ acc
-                        |> (@) [ (createAsyncMoveCalculation coord State.Vertical) ])
+                        let horizontalMoveCalcAcc =
+                            if isBeginingOfWord coord State.Horizontal st then
+                                [ (createAsyncMoveCalculation coord State.Horizontal) ] @ acc
+                            else acc
+                        
+                        if isBeginingOfWord coord State.Vertical st then
+                            (createAsyncMoveCalculation coord State.Vertical) :: horizontalMoveCalcAcc
+                        else horizontalMoveCalcAcc)
                     List.Empty
                 |> Async.Parallel
 
