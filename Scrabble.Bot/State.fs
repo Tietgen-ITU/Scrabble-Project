@@ -27,6 +27,10 @@ let mkState b d pn h pl pt =
       tilePlacement = Map.empty<coord, (uint32 * (char * int))>
       points = [ for i in 1 .. pl.Length -> 0 ] }
 
+type Direction =
+    | Horizontal
+    | Vertical
+
 let removePlayer st playerIdToRemove =
     { st with players = List.updateAt (playerIdToRemove - 1) false st.players }
 
@@ -70,6 +74,10 @@ let hasLetter coordinate =
     | FoundValue coordinate _ -> true
     | _ -> false
 
+
+
+    
+
 let hasSquare (board: Parser.board) coord =
     match board.squares coord with
     | StateMonad.Success a ->
@@ -77,6 +85,15 @@ let hasSquare (board: Parser.board) coord =
         | Some _ -> true
         | None -> false
     | StateMonad.Failure _ -> false
+
+let isBeginingOfWord pos orientation st =
+
+    let adjacentCoord =
+        match orientation with
+        | Vertical -> (pos |> fst, (pos |> snd) + 1)
+        | Horizontal -> ((pos |> fst) - 1, pos |> snd)
+
+    not(hasSquare st.board adjacentCoord) || not(hasLetter adjacentCoord st.tilePlacement)
 
 (*
     Updates the board with the function provided. This is created as there are a lot of different
