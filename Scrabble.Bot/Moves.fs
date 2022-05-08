@@ -250,16 +250,16 @@ let loopBlank
     (restOfTheRack: Piece list)
     (allowedLetters: Set<char>) 
     : Plays =
-    let rec aux r rack out : Plays =
-        match r with 
+    let rec aux blankLetters rack out : Plays =
+        match blankLetters with 
         | [] -> out
-        | tile :: blank' -> 
+        | tile :: blankLetters' -> 
             let out = 
                 match (f tile rack) with
                 | (_, []) -> out
                 | (_, plays) -> ([], plays @ (out |> snd))
 
-            aux blank' rack out
+            aux blankLetters' rack out
 
     aux (getAllowedPieces allowedLetters blank) restOfTheRack ([], [])
 
