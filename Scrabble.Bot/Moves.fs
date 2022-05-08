@@ -42,10 +42,10 @@ let getLetter coordinate (state: State.state) =
 
 let nextArc (c: (uint32 * (char * int))) (arc: Dictionary.Dict) = Dictionary.step (c |> snd |> fst) arc
 
-let getNextCoordinate (pos: coord) (offset: int32) (dir: Direction) =
+let getNextCoordinate (pos: coord) (offset: int32) (dir: State.Direction) =
     match dir with
-    | Vertical -> (pos |> fst, (pos |> snd) + offset)
-    | Horizontal -> ((pos |> fst) + offset, pos |> snd)
+    | State.Vertical -> (pos |> fst, (pos |> snd) + offset)
+    | State.Horizontal -> ((pos |> fst) + offset, pos |> snd)
 
 let getPlayMovesFromPlays (plays: Play list) : Move list =
     plays
@@ -73,7 +73,7 @@ let validateGetLetter (st: state) (coord: coord) (moves: Move list) : Option<Pie
 
 let validateDirection
     (st: state)
-    (direction: Direction)
+    (direction: State.Direction)
     (coord: coord)
     (dict: Dictionary.Dict)
     (valid: bool)
@@ -132,9 +132,9 @@ let validateMove (st: state) (pieces: Map<uint32, tile>) (plays: Play list) =
         match moves' with
         | [] -> true
         | (coord, letter) :: rest ->
-            match testCoordAt st Horizontal coord letter moves with
+            match testCoordAt st State.Horizontal coord letter moves with
             | true ->
-                match testCoordAt st Vertical coord letter moves with
+                match testCoordAt st State.Vertical coord letter moves with
                 | true -> aux rest moves
                 | false -> false
             | false -> false
@@ -213,7 +213,7 @@ let goOn
     (pieces: Map<uint32, ScrabbleUtil.tile>) // TODO: I really don't like having to pass around the state and pieces if we don't need it in all the methods. Maybe we should move recordPlay to a lambda function, it would help with code duplication as well
     (anchor: coord)
     (pos: int32)
-    (direction: Direction)
+    (direction: State.Direction)
     (l: (uint32 * (char * int)))
     (word: (uint32 * (char * int)) list)
     (rack: (uint32 * (char * int)) list)
@@ -294,7 +294,7 @@ let rec genAux
     (pieces: Map<uint32, ScrabbleUtil.tile>)
     (anchor: ScrabbleUtil.coord)
     (pos: int32)
-    (direction: Direction)
+    (direction: State.Direction)
     (word: (uint32 * (char * int)) list)
     (rack: (uint32 * (char * int)) list)
     (arc: Dictionary.Dict)
@@ -325,7 +325,7 @@ let gen
     (state: State.state)
     (pieces: Map<uint32, ScrabbleUtil.tile>)
     (startPos: coord)
-    (dir: Direction)
+    (dir: State.Direction)
     : Move list list =
 
     let pos = 0 // Should always be 0 when starting
@@ -346,7 +346,7 @@ let getNextMove (st: state) (pieces: Map<uint32, tile>) =
 
     let possibleWords =
         if st.tilePlacement.IsEmpty then
-            gen st pieces st.board.center Vertical
+            gen st pieces st.board.center State.Vertical
             |> List.filter (fun word -> not <| List.isEmpty word)
             |> List.sortByDescending (fun word -> word |> List.length)
         else
@@ -355,9 +355,9 @@ let getNextMove (st: state) (pieces: Map<uint32, tile>) =
                 |> Map.toList
                 |> List.fold
                     (fun acc (coord, _) ->
-                        [ (createAsyncMoveCalculation coord Horizontal) ]
+                        [ (createAsyncMoveCalculation coord State.Horizontal) ]
                         @ acc
-                        |> (@) [ (createAsyncMoveCalculation coord Vertical) ])
+                        |> (@) [ (createAsyncMoveCalculation coord State.Vertical) ])
                     List.Empty
                 |> Async.Parallel
 
