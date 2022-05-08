@@ -370,7 +370,7 @@ let rec genAux
                 allowedLetters
 
         let possiblePlays =
-            if hasBlank rack then
+            if hasBlank rack && (possiblePlays |> snd) = [] then
                 let blank = List.find isBlank rack
                 let remaining = List.removeAt (List.findIndex isBlank rack) rack 
                 let pl = (plays |> fst, possiblePlays |> snd)
