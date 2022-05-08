@@ -105,7 +105,7 @@ let playWordDirect () =
                           ((0, 4), (5u, ('E', 1))) ])
             state
 
-    let res = gen state pieces (0, 0) Horizontal
+    let res = gen state pieces (0, 0) State.Horizontal
     printf "%A\n" res
     Assert.AreEqual(((1, 0), (1u, ('A', 1))), res |> List.head |> List.item 0)
     Assert.AreEqual(((2, 0), (18u, ('R', 1))), res |> List.head |> List.item 1)
