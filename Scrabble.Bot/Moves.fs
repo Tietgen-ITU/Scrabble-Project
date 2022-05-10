@@ -5,6 +5,7 @@ open ScrabbleUtil
 open ScrabbleUtil.DebugPrint
 open System.Text
 
+
 type Direction =
     | Horizontal
     | Vertical
@@ -37,6 +38,14 @@ let createMoveMailbox =
         
 
         loop (0, []))
+
+let getBestMove (state: State.state) (currentBest: (int * Play list)) (newPlay: Play list) =
+    let newList = List.map (fun play -> match play with
+                                                                            | PlayLetter (c,(id,(l,p))) -> (c,(l,p))
+                                                                            | PlayedLetter (c,(id,(l,p))) -> (c,(l,p))
+                                                        ) newPlay
+    let newPoints = DIB.PointCalculator.calculateWordPoint newList state.board
+    if newPoints > (fst currentBest) then (newPoints, newPlay) else currentBest
 
 let listToString (chars: (uint32 * (char * int)) list) =
     string (List.fold (fun (sb: StringBuilder) c -> sb.Append(char (c |> snd |> fst))) (new StringBuilder()) chars)
