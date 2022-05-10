@@ -19,6 +19,25 @@ type Play =
 
 type Plays = (Play list * Play list list)
 
+type MessageRequest<'a> = 
+    | SetValue of 'a
+    | RequestValue of AsyncReplyChannel<'a>
+
+let createMoveMailbox = 
+    MailboxProcessor.Start(fun inbox -> 
+        let rec loop word = 
+            async {
+                let! msg = inbox.Receive()
+                match msg with
+                | SetValue a -> return! loop (0, a)
+                | RequestValue replyCh -> 
+                    replyCh.Reply (snd word)
+                    return! loop word
+            }
+        
+
+        loop (0, []))
+
 let listToString (chars: (uint32 * (char * int)) list) =
     string (List.fold (fun (sb: StringBuilder) c -> sb.Append(char (c |> snd |> fst))) (new StringBuilder()) chars)
 
@@ -338,10 +357,13 @@ let gen
     |> List.fold (fun state t -> (getPlayMovesFromPlays t) :: state) []
 
 let getNextMove (st: state) (pieces: Map<uint32, tile>) =
+
+    let wordMailBox = createMoveMailbox
+
     let createAsyncMoveCalculation coord dir =
         async {
-            let result = gen st pieces coord dir
-            return result
+            gen st pieces coord dir
+            |> Seq.iter (fun item -> wordMailBox.Post (SetValue item))
         }
 
     let possibleWords =
@@ -349,6 +371,7 @@ let getNextMove (st: state) (pieces: Map<uint32, tile>) =
             gen st pieces st.board.center Vertical
             |> List.filter (fun word -> not <| List.isEmpty word)
             |> List.sortByDescending (fun word -> word |> List.length)
+            |> List.item 0
         else
             let asyncCalculation =
                 st.tilePlacement
@@ -359,17 +382,16 @@ let getNextMove (st: state) (pieces: Map<uint32, tile>) =
                         @ acc
                         |> (@) [ (createAsyncMoveCalculation coord Vertical) ])
                     List.Empty
-                |> Async.Parallel
+                
+            let cts = new System.Threading.CancellationTokenSource()
 
-            Async.RunSynchronously asyncCalculation
-            |> Array.fold (fun acc words -> acc @ words) List.Empty
-            |> List.filter (fun word -> not <| List.isEmpty word)
-            |> List.sortByDescending (fun word -> word |> List.length)
-
-    // TODO: This might slow us down
-    List.iter (fun x -> debugPrint (sprintf "Word: %s\n" (List.map snd x |> listToString))) possibleWords
+            Async.Parallel (asyncCalculation, System.Environment.ProcessorCount)
+            |> fun comp -> Async.RunSynchronously (comp, 1000, cts.Token) |> ignore
+            
+            // Return the best result of the computation
+            wordMailBox.PostAndReply((fun x -> RequestValue x), 2000)
 
     if possibleWords.Length = 0 then
         None
     else
-        Some(possibleWords[0])
+        Some(possibleWords)
