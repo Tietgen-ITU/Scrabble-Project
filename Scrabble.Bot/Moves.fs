@@ -21,7 +21,10 @@ type Play =
 type Plays = (Play list * Play list list)
 
 let getBestMove (state: State.state) (currentBest: (Play list * int)) (newPlay: Play list) =
-    let newList = List.map (fun (coord,(_,(letter,point))) -> (coord,(letter,point))) newPlay
+    let newList = List.map (fun play -> match play with
+                                                                            | PlayLetter (c,(id,(l,p))) -> (c,(l,p))
+                                                                            | PlayedLetter (c,(id,(l,p))) -> (c,(l,p))
+                                                        ) newPlay
     let newPoints = DIB.PointCalculator.calculateWordPoint newList state.board
     let getSecondInTuple = (fun (_ , points) -> points)
     let getFirstInTuple = (fun (letters , _) -> letters)
