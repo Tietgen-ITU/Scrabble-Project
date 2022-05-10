@@ -24,20 +24,7 @@ type MessageRequest<'a> =
     | SetValue of 'a
     | RequestValue of AsyncReplyChannel<'a>
 
-let createMoveMailbox = 
-    MailboxProcessor.Start(fun inbox -> 
-        let rec loop word = 
-            async {
-                let! msg = inbox.Receive()
-                match msg with
-                | SetValue a -> return! loop (0, a)
-                | RequestValue replyCh -> 
-                    replyCh.Reply (snd word)
-                    return! loop word
-            }
-        
 
-        loop (0, []))
 
 let getBestMove (state: State.state) (currentBest: (int * Play list)) (newPlay: Play list) =
     let newList = List.map (fun play -> match play with
@@ -46,6 +33,21 @@ let getBestMove (state: State.state) (currentBest: (int * Play list)) (newPlay: 
                                                         ) newPlay
     let newPoints = DIB.PointCalculator.calculateWordPoint newList state.board
     if newPoints > (fst currentBest) then (newPoints, newPlay) else currentBest
+
+let createMoveMailbox st = 
+    MailboxProcessor.Start(fun inbox -> 
+        let rec loop word = 
+            async {
+                let! msg = inbox.Receive()
+                match msg with
+                | SetValue newWord -> return! loop (getBestMove st word newWord)
+                | RequestValue replyCh -> 
+                    replyCh.Reply (snd word)
+                    return! loop word
+            }
+        
+
+        loop (0, []))
 
 let listToString (chars: (uint32 * (char * int)) list) =
     string (List.fold (fun (sb: StringBuilder) c -> sb.Append(char (c |> snd |> fst))) (new StringBuilder()) chars)
@@ -354,7 +356,7 @@ let gen
     (pieces: Map<uint32, ScrabbleUtil.tile>)
     (startPos: coord)
     (dir: Direction)
-    : Move list list =
+    : Play list list =
 
     let pos = 0 // Should always be 0 when starting
     let word = List.Empty
@@ -363,11 +365,10 @@ let gen
 
     genAux state pieces startPos pos dir word rack initArc ([], [])
     |> snd
-    |> List.fold (fun state t -> (getPlayMovesFromPlays t) :: state) []
 
 let getNextMove (st: state) (pieces: Map<uint32, tile>) =
 
-    let wordMailBox = createMoveMailbox
+    let wordMailBox = createMoveMailbox st
 
     let createAsyncMoveCalculation coord dir =
         async {
@@ -375,7 +376,7 @@ let getNextMove (st: state) (pieces: Map<uint32, tile>) =
             |> Seq.iter (fun item -> wordMailBox.Post (SetValue item))
         }
 
-    let possibleWords =
+    let wordResult =
         if st.tilePlacement.IsEmpty then
             gen st pieces st.board.center Vertical
             |> List.filter (fun word -> not <| List.isEmpty word)
@@ -400,7 +401,7 @@ let getNextMove (st: state) (pieces: Map<uint32, tile>) =
             // Return the best result of the computation
             wordMailBox.PostAndReply((fun x -> RequestValue x), 2000)
 
-    if possibleWords.Length = 0 then
+    if wordResult.Length = 0 then
         None
     else
-        Some(possibleWords)
+        Some(getPlayMovesFromPlays wordResult)
