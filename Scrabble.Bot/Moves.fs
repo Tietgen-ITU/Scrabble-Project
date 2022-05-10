@@ -26,9 +26,7 @@ let getBestMove (state: State.state) (currentBest: (Play list * int)) (newPlay: 
                                                                             | PlayedLetter (c,(id,(l,p))) -> (c,(l,p))
                                                         ) newPlay
     let newPoints = DIB.PointCalculator.calculateWordPoint newList state.board
-    let getSecondInTuple = (fun (_ , points) -> points)
-    let getFirstInTuple = (fun (letters , _) -> letters)
-    if newPoints > (getSecondInTuple currentBest) then newPlay else getFirstInTuple currentBest
+    if newPoints > (snd currentBest) then newPlay else fst currentBest
 
 let listToString (chars: (uint32 * (char * int)) list) =
     string (List.fold (fun (sb: StringBuilder) c -> sb.Append(char (c |> snd |> fst))) (new StringBuilder()) chars)
