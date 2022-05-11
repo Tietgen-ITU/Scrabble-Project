@@ -1,7 +1,6 @@
 module internal Validation
 
 open ScrabbleUtil
-open ScrabbleUtil.DebugPrint
 
 open State
 open Play

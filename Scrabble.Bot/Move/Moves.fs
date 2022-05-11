@@ -30,7 +30,7 @@ let recordPlay
      | false -> getWords plays)
 
 let loopPiece
-    (goNext: (uint32 * (char * int)) -> Piece list -> Plays)
+    (goNext: uint32 * (char * int) -> Piece list -> Plays)
     restOfTheRack
     allowedLetters
     tile
@@ -47,14 +47,14 @@ let loopPiece
         | [] -> plays
         | ch :: restOfLetters ->
             match (goNext ch restOfTheRack) with
-            | (_, []) -> goThrough restOfLetters plays
-            | (_, newPlays) -> goThrough restOfLetters ([], newPlays @ (plays |> snd))
+            | _, [] -> goThrough restOfLetters plays
+            | _, newPlays -> goThrough restOfLetters ([], newPlays @ (plays |> snd))
 
     goThrough letters currentPlays
 
 
 let loopRack
-    (f: (uint32 * (char * int)) -> Piece list -> Plays)
+    (f: uint32 * (char * int) -> Piece list -> Plays)
     (rack: Piece list)
     (allowedLetters: Set<char>)
     : Plays =
@@ -166,7 +166,7 @@ let gen (state: State.state) (pieces: Map<uint32, tile>) (startPos: coord) (dir:
         genAux state startPos pos dir rack initArc ([], [])
         |> snd
         |> List.map (fun x -> (DIB.PointCalculator.calculateWordPoint (getNormalWord x) state.board, x))
-        |> List.sortByDescending (fun (points, _) -> points)
+        |> List.sortByDescending fst
 
     match result with
     | [] -> List.Empty
