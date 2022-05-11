@@ -28,7 +28,7 @@ let getRack (state: State.state) (pieces: Map<uint32, tile>) : Piece list =
     |> MultiSet.fold (fun rack piece -> createPieces rack piece pieces) []
 
 let getAllowedLetters (dict: Dictionary.Dict) =
-    let alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ$" |> Seq.toList
+    let alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ" |> Seq.toList
 
     let rec aux (dict: Dictionary.Dict) (letters: char list) (allowed: Set<char>) =
         match letters with

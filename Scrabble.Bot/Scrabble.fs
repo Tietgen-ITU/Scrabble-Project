@@ -44,8 +44,7 @@ module Scrabble =
             Print.printHand pieces (State.hand st)
 
             if st.playerTurn = st.playerId then
-                let move =
-
+                let move = 
                     let mv = Moves.getNextMove st pieces
 
                     match mv with

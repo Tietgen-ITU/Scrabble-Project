@@ -21,10 +21,9 @@ let getPieceAsBlank =
     | Normal _ -> failwith "this is not a blank piece"
     | Blank a -> a
 
-let pieceIsAllowed allowedLetters =
-    function
+let pieceIsAllowed allowedLetters = function
     | Normal (_, (ch, _)) -> Set.contains ch allowedLetters
-    | Blank _ -> true
+    | Blank _ -> not(allowedLetters.Count = 0)
 
 (*
     Provides with a list of normal pieces.

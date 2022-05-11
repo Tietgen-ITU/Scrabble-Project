@@ -212,15 +212,20 @@ let rec genAux
             plays
         | plays -> plays
 
-let gen (state: State.state) (pieces: Map<uint32, tile>) (startPos: coord) (dir: Direction) : Play list list =
+let gen (state: State.state) (pieces: Map<uint32, tile>) (startPos: coord) (dir: Direction) : Play list =
 
     let pos = 0 // Should always be 0 when starting
     let word = List.Empty
     let rack = getRack state pieces // Retrieve our current hand
     let initArc = state.dict
 
-    genAux state pieces startPos pos dir word rack initArc ([], [])
-    |> snd
+    let result = genAux state pieces startPos pos dir word rack initArc ([], [])
+                        |> snd
+                        |> List.map (fun x -> (DIB.PointCalculator.calculateWordPoint (getNormalWord x) state.board, x))
+                        |> List.sortByDescending (fun (points, _) -> points)
+    
+    if result.IsEmpty then []
+    else List.item 0 result |> snd
 
 let getNextMove (st: state) (pieces: Map<uint32, tile>) =
 
@@ -228,18 +233,13 @@ let getNextMove (st: state) (pieces: Map<uint32, tile>) =
 
     let createAsyncMoveCalculation coord dir =
         async {
-            gen st pieces coord dir
-            |> Seq.iter (fun item -> wordMailBox.Post(SetValue item))
+            let result = gen st pieces coord dir
+            wordMailBox.Post(SetValue result)
         }
 
     let wordResult =
         if st.tilePlacement.IsEmpty then
             gen st pieces st.board.center Vertical
-            |> List.filter (fun word -> not <| List.isEmpty word)
-            |> List.map (fun x -> (DIB.PointCalculator.calculateWordPoint (getNormalWord x) st.board, x))
-            |> List.sortByDescending fst
-            |> List.item 0
-            |> snd
         else
             let asyncCalculation =
                 st.tilePlacement
@@ -268,7 +268,8 @@ let getNextMove (st: state) (pieces: Map<uint32, tile>) =
                 |> ignore
 
             // Return the best result of the computation
-            wordMailBox.PostAndReply(RequestValue, 2000)
+            wordMailBox.TryPostAndReply(RequestValue, 2000)
+            |> Option.defaultValue []  
 
     if wordResult.Length = 0 then
         None
