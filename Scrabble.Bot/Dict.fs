@@ -9,8 +9,8 @@ let sep = '$'
 type Dictionary<'a, 'b> with
     member x.GetValueOption(key: 'a) : 'b option =
         match x.TryGetValue(key) with
-        | (true, value) -> Some(value)
-        | (false, _) -> None
+        | true, value -> Some(value)
+        | false, _ -> None
 
 let emptyDictionary () : Dictionary<char, Dict> = Dictionary()
 
@@ -27,7 +27,7 @@ let rec actuallyInsert (word: char list) (D (currC, currChildren, currIsLeaf)) :
             | Some node -> node
             | None -> D(nextChar, emptyDictionary (), false)
 
-        currChildren.[nextChar] <- actuallyInsert nextWord nextNode
+        currChildren[nextChar] <- actuallyInsert nextWord nextNode
 
         D(currC, currChildren, currIsLeaf)
 
@@ -70,7 +70,7 @@ let rec actuallyLookup (word: char list) (dict: Dict) : bool =
 
 
 let lookup (word: string) (dict: Dict) : bool =
-    let (pre, suff) =
+    let pre, suff =
         word.ToCharArray()
         |> Array.toList
         |> List.splitAt 1

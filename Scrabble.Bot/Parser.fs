@@ -1,5 +1,5 @@
 // ScrabbleUtil contains the types coord, boardProg, and SquareProg. Remove these from your file before proceeding.
-// Also note that the modulse Ass7 and ImpParser have been merged to one module called Parser.
+// Also note that the modules Ass7 and ImpParser have been merged to one module called Parser.
 
 // Insert your Parser.fs file here from Assignment 7. All modules must be internal.
 
@@ -7,7 +7,6 @@ module internal Parser
 
 open StateMonad
 open ScrabbleUtil // NEW. KEEP THIS LINE.
-open System
 open Eval
 open FParsecLight.TextParser // Industrial parser-combinator library. Use for Scrabble Project.
 
@@ -169,7 +168,7 @@ let CreateDisj (a: bExp, b: bExp) = (Not a, Not b) |> Conj |> Not
 
 let DisjParse =
     binop (pstring "\\/") EqualityParse ConjunctionParse
-    |>> (fun x -> CreateDisj x)
+    |>> CreateDisj
     <?> "Disjunction"
 
 do
@@ -329,8 +328,8 @@ let parseBoardProg (s: string) (sqs: Map<int, square>) : boardFun2 =
     |> (fun x -> stmntToBoardFun x sqs)
 
 let mkBoard (bp: boardProg) : board =
-    let m' = Map.map (fun _ v -> parseSquareProg v) bp.squares
+    let m' = Map.map (fun _ -> parseSquareProg) bp.squares
 
     { center = bp.center
-      defaultSquare = m'.[bp.usedSquare]
+      defaultSquare = m'[bp.usedSquare]
       squares = parseBoardProg bp.prog m' }
