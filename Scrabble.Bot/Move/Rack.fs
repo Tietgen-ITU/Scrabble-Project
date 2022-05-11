@@ -18,16 +18,3 @@ let getRack (state: State.state) (pieces: Map<uint32, tile>) : Piece list =
 
     state.hand
     |> MultiSet.fold (fun rack piece -> createPieces rack piece pieces) []
-
-let getAllowedLetters (dict: Dictionary.Dict) =
-    let alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ" |> Seq.toList
-
-    let rec aux (dict: Dictionary.Dict) (letters: char list) (allowed: Set<char>) =
-        match letters with
-        | [] -> allowed
-        | letter :: letters ->
-            match Dictionary.step letter dict with
-            | Some _ -> aux dict letters (Set.add letter allowed)
-            | None -> aux dict letters allowed
-
-    aux dict alphabet Set.empty

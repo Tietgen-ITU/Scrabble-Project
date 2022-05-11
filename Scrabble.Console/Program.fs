@@ -28,7 +28,7 @@ let main _ =
 
 
     //let board = ScrabbleUtil.StandardBoard.standardBoard ()
-    let board      = ScrabbleUtil.InfiniteBoard.infiniteBoard ()
+    let board = ScrabbleUtil.InfiniteBoard.infiniteBoard ()
 
     //    let board      = ScrabbleUtil.RandomBoard.randomBoard ()
 //    let board      = ScrabbleUtil.RandomBoard.randomBoardSeed (Some 42)
@@ -57,16 +57,16 @@ let main _ =
     let dictionary, _ = time (fun () -> ScrabbleUtil.Dictionary.mkDict words dictAPI)
 
     let ourPlayers =
-        [ ("De imperative banditter 1", dictionary, DIB.Scrabble.startGame)
-          ("De imperative banditter 2", dictionary, DIB.Scrabble.startGame)
-          ("De imperative banditter 3", dictionary, DIB.Scrabble.startGame)
+        [ //("De imperative banditter 1", dictionary, DIB.Scrabble.startGame)
+          //("De imperative banditter 2", dictionary, DIB.Scrabble.startGame)
+          //("De imperative banditter 3", dictionary, DIB.Scrabble.startGame)
           ("De imperative banditter 4", dictionary, DIB.Scrabble.startGame) ]
 
-    // let otherPlayers = []
     let otherPlayers =
         spawnMultiples "OxyphenButazone" dictionary Oxyphenbutazone.Scrabble.startGame 3
+    // let otherPlayers = []
 
-    let players = ourPlayers
+    let players = ourPlayers @ otherPlayers
 
 
     do ScrabbleServer.Comm.startGame board dictionary handSize timeout tiles seed port players

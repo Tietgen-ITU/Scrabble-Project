@@ -8,7 +8,6 @@ open Piece
 open Rack
 open Play
 open MoveUtil
-open Validation
 open Mailbox
 open CrossCheck
 
@@ -92,9 +91,7 @@ let loopPiece
     let letters =
         match tile with
         | Normal a -> [ a ]
-        | Blank _ ->
-            [ List.map (fun x -> (0u, (x, 0))) allowedLetters
-              |> List.item 0 ] // TODO: Fix this later
+        | Blank _ -> List.map (fun x -> (0u, (x, 0))) allowedLetters
 
     let rec goThrough lts plays =
         match lts with

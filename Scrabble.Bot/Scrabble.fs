@@ -41,6 +41,7 @@ module Scrabble =
                 let st' =
                     List.fold State.addTileToHand st newPieces
                     |> State.placeLetters (Seq.ofList ms)
+                    |> CrossCheck.update ms
                     |> State.changeTurn
                     |> State.addPoints st.playerId points
                     |> State.removeTilesFromHand tilesToRemove // This state needs to be updated
@@ -52,6 +53,7 @@ module Scrabble =
                 let st' =
                     st
                     |> State.placeLetters (Seq.ofList ms)
+                    |> CrossCheck.update ms
                     |> State.addPoints pid points
                     |> State.changeTurn
 
