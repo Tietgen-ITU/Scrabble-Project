@@ -107,9 +107,10 @@ let playWordDirect () =
 
     let res = gen state pieces (0, 0) Horizontal
     printf "%A\n" res
-    Assert.AreEqual(((1, 0), (1u, ('A', 1))), res |> List.head |> List.item 0)
-    Assert.AreEqual(((2, 0), (18u, ('R', 1))), res |> List.head |> List.item 1)
-    Assert.AreEqual(((3, 0), (5u, ('E', 1))), res |> List.head |> List.item 2)
+    Assert.AreEqual(PlayedLetter ((0,0), (3u, ('C', 1))), res |> List.head |> List.item 0)
+    Assert.AreEqual(PlayLetter((1, 0), (1u, ('A', 1))), res |> List.head |> List.item 1)
+    Assert.AreEqual(PlayLetter((2, 0), (18u, ('R', 1))), res |> List.head |> List.item 2)
+    Assert.AreEqual(PlayLetter((3, 0), (5u, ('E', 1))), res |> List.head |> List.item 3)
 
 [<Test>]
 let playFirstWord () =
@@ -128,10 +129,10 @@ let playFirstWord () =
     let res = getNextMove state pieces |> Option.get
 
     printf "%A\n" res
-    Assert.AreEqual(((0, -2), (3u, ('C', 3))), res |> List.item 2)
-    Assert.AreEqual(((0, -1), (1u, ('A', 1))), res |> List.item 1)
-    Assert.AreEqual(((0, 0), (18u, ('R', 1))), res |> List.item 0)
-    Assert.AreEqual(((0, 1), (5u, ('E', 1))), res |> List.item 3)
+    Assert.AreEqual(((0, 0), (1u, ('A', 1))), res |> List.item 0)
+    Assert.AreEqual(((0, -1), (3u, ('C', 3))), res |> List.item 1)
+    Assert.AreEqual(((0, 1), (18u, ('R', 1))), res |> List.item 2)
+    Assert.AreEqual(((0, 2), (5u, ('E', 1))), res |> List.item 3)
 
 [<Test>]
 let playWordDirectValidate () =

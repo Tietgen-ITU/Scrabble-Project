@@ -24,7 +24,11 @@ type MessageRequest<'a> =
     | SetValue of 'a
     | RequestValue of AsyncReplyChannel<'a>
 
-
+let getNormalWord = 
+    List.map (fun play -> match play with
+                            | PlayLetter (c,(id,(l,p))) -> (c,(l,p))
+                            | PlayedLetter (c,(id,(l,p))) -> (c,(l,p))
+                            )
 
 let getBestMove (state: State.state) (currentBest: (int * Play list)) (newPlay: Play list) =
     let newList = List.map (fun play -> match play with
@@ -380,8 +384,9 @@ let getNextMove (st: state) (pieces: Map<uint32, tile>) =
         if st.tilePlacement.IsEmpty then
             gen st pieces st.board.center Vertical
             |> List.filter (fun word -> not <| List.isEmpty word)
-            |> List.sortByDescending (fun word -> word |> List.length)
-            |> List.item 0
+            |> List.map (fun x -> (DIB.PointCalculator.calculateWordPoint (getNormalWord x) st.board, x))
+            |> List.sortByDescending (fun (points, _) -> points)
+            |> List.item 0 |> snd
         else
             let asyncCalculation =
                 st.tilePlacement
