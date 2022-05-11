@@ -15,4 +15,4 @@ type Plays = (Play list * Play list list)
 
 val getNextMove: state -> Map<uint32, tile> -> Option<List<coord * (uint32 * (char * int))>>
 val validateMove: state -> Map<uint32, tile> -> List<Play> -> bool
-val gen: state -> Map<uint32, tile> -> coord -> State.Direction -> Move list list
+val gen: state -> Map<uint32, tile> -> coord -> State.Direction -> Play list list
