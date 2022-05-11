@@ -6,6 +6,8 @@ open TestingUtil
 let internal addConstraint coord contraint (st: State.state) =
     {st with crossCheck = Map.add coord contraint st.crossCheck }
 
+let alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ" |> Set.ofSeq
+
 [<TestCase(0, 0)>]
 [<TestCase(1, 0)>]
 [<TestCase(0, 1)>]
@@ -14,7 +16,7 @@ let internal addConstraint coord contraint (st: State.state) =
 [<TestCase(-1, -1)>]
 [<TestCase(1, 1)>]
 let getAllowedLetters_Empty_returnEverything (x, y) =
-    let alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ" |> Set.ofSeq
+    
     let mockState = mockState List.empty List.Empty
                                     
     let result = CrossCheck.getAllowedLetters mockState (x, y)
@@ -42,3 +44,56 @@ let getAllowedLetters_hasARestrictiveMapOnCoord_returnEverything () =
     Assert.AreEqual(a2, result01)
     Assert.AreEqual(a3, result02)
     Assert.AreEqual(a2, result03)
+
+[<Test>]
+let update_placeCoat_work () = 
+    let empty = Map.empty
+
+    let tTop = "AS" |> Set.ofSeq
+    let tBot = "AIO" |> Set.ofSeq
+    let aTop = "AZTJ" |> Set.ofSeq
+    let aBot = "AHSNT" |> Set.ofSeq
+    let oTop = "BDGHJLMNOPSTWY" |> Set.ofSeq
+    let oBot = "DEF" |> Set.ofSeq
+    let cBot = "H" |> Set.ofSeq
+
+    let mockState = mockState [] [ "COAT";"CH";"BO";"DO";"GO";"HO";"JO";"LO";"MO";"NO";"OO";"PO";"SO";"TO";"WO";"YO";"OD";"OE";"OF";"AA";"ZA";"TA";"JA";"AH";"AS";"AN";"AT";"ST";"TA";"TO";"I"; "SCOAT"; "COATS"]
+                                    |> CrossCheck.update [ 
+                                                            ((0,0), (0u, ('C', 0)))
+                                                            ((1,0), (0u, ('O', 0))) 
+                                                            ((2,0), (0u, ('A', 0)))
+                                                            ((3,0), (0u, ('T', 0)))]
+
+
+
+    let resultCEnd     = CrossCheck.getAllowedLetters mockState (-1, 0)  
+    let resultCTop     = CrossCheck.getAllowedLetters mockState (0, 1)   
+    let resultCBot     = CrossCheck.getAllowedLetters mockState (0, -1)  
+    let topLeftCorner  = CrossCheck.getAllowedLetters mockState (-1, 1)  
+    let topRightCorner = CrossCheck.getAllowedLetters mockState (4, 1)   
+    let botLeftCorner  = CrossCheck.getAllowedLetters mockState (-1, -1) 
+    let botRightCorner = CrossCheck.getAllowedLetters mockState (4, -1)  
+    let resultTopO     = CrossCheck.getAllowedLetters mockState (1, 1)   
+    let resultBotO     = CrossCheck.getAllowedLetters mockState (1, -1)  
+    let resultTopA     = CrossCheck.getAllowedLetters mockState (2, 1)   
+    let resultBotA     = CrossCheck.getAllowedLetters mockState (2, -1)  
+    let resultTopT     = CrossCheck.getAllowedLetters mockState (3, 1)   
+    let resultBotT     = CrossCheck.getAllowedLetters mockState (3, -1)  
+    let resultEndT     = CrossCheck.getAllowedLetters mockState (4, 0)   
+
+    Assert.AreEqual(empty, resultCEnd)
+    Assert.AreEqual(empty, resultEndT)
+    Assert.AreEqual(alphabet, topLeftCorner)
+    Assert.AreEqual(alphabet, topRightCorner)
+    Assert.AreEqual(alphabet, botLeftCorner)
+    Assert.AreEqual(alphabet, botRightCorner)
+    Assert.AreEqual(empty, resultCTop)
+    Assert.AreEqual(cBot, resultCBot)
+    Assert.AreEqual(oTop, resultTopO)
+    Assert.AreEqual(oBot, resultBotO)
+    Assert.AreEqual(aTop, resultTopA)
+    Assert.AreEqual(aBot, resultBotA)
+    Assert.AreEqual(tTop, resultTopT)
+    Assert.AreEqual(tBot, resultBotT)
+
+
