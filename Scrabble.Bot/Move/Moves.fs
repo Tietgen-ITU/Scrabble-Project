@@ -53,11 +53,7 @@ let loopPiece
     goThrough letters currentPlays
 
 
-let loopRack
-    (f: uint32 * (char * int) -> Piece list -> Plays)
-    (rack: Piece list)
-    (allowedLetters: Set<char>)
-    : Plays =
+let loopRack (f: uint32 * (char * int) -> Piece list -> Plays) (rack: Piece list) (allowedLetters: Set<char>) : Plays =
     let rec aux (rack': Piece list) (allowedLetters: Set<char>) (out: Plays) : Plays =
         match rack' with
         | [] -> out
@@ -108,7 +104,6 @@ let goOn
 
     let roomToTheLeft = hasRoom -1
     let roomToTheRight = hasRoom 1
-    let roomAround = roomToTheLeft && roomToTheRight
 
     match pos <= 0 with // Moving left
     | true ->
@@ -119,7 +114,7 @@ let goOn
 
             switchDirection
                 (fun _ newArc ->
-                    match roomAround with
+                    match roomToTheLeft && roomToTheRight with
                     | true -> genAux 1 newArc plays
                     | false -> plays)
                 plays
@@ -139,17 +134,16 @@ let rec genAux
     (arc: Dictionary.Dict)
     (plays: Plays)
     : Plays =
-    let goOn c rack arc valid plays =
-        goOn genAux state anchor pos direction c rack arc valid plays
+    let goOn c rack valid =
+        goOn genAux state anchor pos direction c rack (nextArc arc c) valid plays
 
     match getLetter (getNextCoordinate anchor pos direction) state with
-    | Some c -> goOn c rack (nextArc arc c) true plays
+    | Some c -> goOn c rack true
     | _ when rack.IsEmpty -> plays
     | None ->
-        let allowedLetters = getAllowedLetters arc
-
         let possiblePlays =
-            loopRack (fun c rack' -> goOn c rack' (nextArc arc c) false plays) rack allowedLetters
+            (getAllowedLetters arc)
+            |> loopRack (fun c rack' -> goOn c rack' false) rack
 
         match possiblePlays with
         | _, [] ->

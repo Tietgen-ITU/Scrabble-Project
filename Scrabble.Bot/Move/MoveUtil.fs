@@ -35,12 +35,9 @@ let getNextCoordinate (pos: coord) (offset: int32) (dir: Direction) =
 
 // FIXME: Might not be the best place for this, but it's used by the Mailbox.fs file
 let getBestMove (state: State.state) (currentBest: int * Play list) (newPlay: Play list) =
-    let newPoints =
-        DIB.PointCalculator.calculateWordPoint (getNormalWord newPlay) state.board
-
-    match newPoints > (fst currentBest) with
-    | true -> (newPoints, newPlay)
-    | false -> currentBest
+    match DIB.PointCalculator.calculateWordPoint (getNormalWord newPlay) state.board with
+    | newPoints when newPoints > (fst currentBest) -> (newPoints, newPlay)
+    | _ -> currentBest
 
 let switchDirection f (defaultValue: 'a) (dict: Dictionary.Dict) : 'a =
     match Dictionary.reverse dict with

@@ -61,12 +61,10 @@ let validateMove (st: state) (plays: Play list) =
     // If the coord you are about to touch is already in the list of tested coords, then you have already tested it.
 
     let testCoordAt direction coord letter moves =
-        let getNextCoordinate offset =
-            getNextCoordinate coord offset direction
+        let testCoord offset =
+            testCoord st (getNextCoordinate coord offset direction)
 
-        match testCoord st (getNextCoordinate 1)
-              || testCoord st (getNextCoordinate -1)
-            with
+        match testCoord 1 || testCoord -1 with
         | true ->
             match nextArc st.dict letter with
             | Some (valid, newArc) -> validateDirection st direction coord newArc valid moves
