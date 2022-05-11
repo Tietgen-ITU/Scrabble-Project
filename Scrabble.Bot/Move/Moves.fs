@@ -10,6 +10,7 @@ open Play
 open MoveUtil
 open Validation
 open Mailbox
+open CrossCheck
 
 let recordPlay
     (st: state)
@@ -25,58 +26,9 @@ let recordPlay
     debugPrint $"Register play: (%d{pos |> fst}, %d{pos |> snd}) %A{c} creating word: %s{playListToString played}\n"
 
     (played,
-     match isWord && validateMove st played with
+     match isWord with
      | true -> played :: getWords plays
      | false -> getWords plays)
-
-let loopPiece
-    (goNext: uint32 * (char * int) -> Piece list -> Plays)
-    restOfTheRack
-    allowedLetters
-    tile
-    currentPlays
-    : Plays =
-
-    let letters =
-        match tile with
-        | Normal a -> [ a ]
-        | Blank _ -> [List.map (fun x -> (0u, (x, 0))) allowedLetters |> List.item 0]
-
-    let rec goThrough lts plays =
-        match lts with
-        | [] -> plays
-        | ch :: restOfLetters ->
-            match (goNext ch restOfTheRack) with
-            | _, [] -> goThrough restOfLetters plays
-            | _, newPlays -> goThrough restOfLetters ([], newPlays @ (plays |> snd))
-
-    goThrough letters currentPlays
-
-
-let loopRack (f: uint32 * (char * int) -> Piece list -> Plays) (rack: Piece list) (allowedLetters: Set<char>) : Plays =
-
-    let rec aux (rack': Piece list) (allowedLetters: Set<char>) (out: Plays) : Plays =
-        match rack' with
-        | [] -> out
-        | tile :: rack' ->
-            let out =
-                match pieceIsAllowed allowedLetters tile with
-                | true ->
-                    loopPiece
-                        f
-                        (rack
-                         |> List.removeAt (rack |> List.findIndex (fun c -> c.Equals(tile))))
-                        (Seq.toList allowedLetters)
-                        tile
-                        out
-                | false -> out
-
-            aux rack' allowedLetters out
-
-    let res = aux rack allowedLetters ([], [])
-
-
-    res
 
 let goOn
     genAux // The genAux function defined below
@@ -129,6 +81,53 @@ let goOn
         | Some (isWord, newArc) -> getPlays roomToTheRight newArc isWord 1
         | None -> plays
 
+let loopPiece
+    (goNext: uint32 * (char * int) -> Piece list -> Plays)
+    restOfTheRack
+    allowedLetters
+    tile
+    currentPlays
+    : Plays =
+
+    let letters =
+        match tile with
+        | Normal a -> [ a ]
+        | Blank _ ->
+            [ List.map (fun x -> (0u, (x, 0))) allowedLetters
+              |> List.item 0 ] // TODO: Fix this later
+
+    let rec goThrough lts plays =
+        match lts with
+        | [] -> plays
+        | ch :: restOfLetters ->
+            match (goNext ch restOfTheRack) with
+            | _, [] -> goThrough restOfLetters plays
+            | _, newPlays -> goThrough restOfLetters ([], newPlays @ (plays |> snd))
+
+    goThrough letters currentPlays
+
+let loopRack (f: uint32 * (char * int) -> Piece list -> Plays) (rack: Piece list) (allowedLetters: Set<char>) : Plays =
+    let rec aux (rack': Piece list) (allowedLetters: Set<char>) (out: Plays) : Plays =
+        match rack' with
+        | [] -> out
+        | tile :: rack' ->
+            let out =
+                match pieceIsAllowed allowedLetters tile with
+                | true ->
+                    loopPiece
+                        f
+                        (rack
+                         |> List.removeAt (rack |> List.findIndex (fun c -> c.Equals(tile))))
+                        (Seq.toList allowedLetters)
+                        tile
+                        out
+                | false -> out
+
+            aux rack' allowedLetters out
+
+    aux rack allowedLetters ([], [])
+
+
 let rec genAux
     (state: State.state)
     (anchor: coord)
@@ -141,12 +140,14 @@ let rec genAux
     let goOn c rack valid =
         goOn genAux state anchor pos direction c rack (nextArc arc c) valid plays
 
-    match getLetter (getNextCoordinate anchor pos direction) state with
+    let nextCoord = getNextCoordinate anchor pos direction
+
+    match getLetter nextCoord state with
     | Some c -> goOn c rack true
     | _ when rack.IsEmpty -> plays
     | None ->
         let possiblePlays =
-            (getAllowedLetters arc)
+            (getAllowedLetters state nextCoord)
             |> loopRack (fun c rack' -> goOn c rack' false) rack
 
         match possiblePlays with
@@ -202,7 +203,7 @@ let getNextMove (st: state) (pieces: Map<uint32, tile>) =
                     List.Empty
 
             let cts = new System.Threading.CancellationTokenSource()
-            
+
             Async.Parallel asyncCalculation
             |> fun comp ->
                 Async.RunSynchronously(comp, 1000, cts.Token)
