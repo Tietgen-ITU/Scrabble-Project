@@ -27,8 +27,14 @@ Group name: &lt;De Imperative Banditter&gt; (optional since this is hosted in a 
     <Compile Include="Parser.fs" />
     <Compile Include="PointCalculator.fs" />
     <Compile Include="State.fs" />
-    <Compile Include="Moves.fsi" />
-    <Compile Include="Moves.fs" />
+    <Compile Include="Move\\Piece.fs" />
+    <Compile Include="Move\\Play.fs" />
+    <Compile Include="Move\\Rack.fs" />
+    <Compile Include="Move\\MoveUtil.fs" />
+    <Compile Include="Move\\Validation.fs" />
+    <Compile Include="Move\\Mailbox.fs" />
+    <Compile Include="Move\\Moves.fsi" />
+    <Compile Include="Move\\Moves.fs" />
     <Compile Include="Scrabble.fsi" />
     <Compile Include="Scrabble.fs" />
   </ItemGroup>

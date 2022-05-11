@@ -2,61 +2,10 @@ module Scrabble.Bot.Tests.MoveTests
 
 open NUnit.Framework
 
+open Scrabble.Bot.Tests.TestingUtil
+
 open Moves
-open Parser
-
-let readLines filePath = System.IO.File.ReadLines(filePath)
-
-let words = [ "CABLE"; "CARE"; "ABLE" ]
-
-let getLookuptable pieces =
-    List.mapi
-        (fun id tile ->
-            if Set.count tile > 1 then
-                None
-            else
-                Some(tile |> Set.toSeq |> Seq.head |> fst, uint32 id))
-        pieces
-    |> List.filter Option.isSome
-    |> List.map Option.get
-    |> Map.ofList
-
-let getHandId (c: char) lookupTable = Map.tryFind c lookupTable |> Option.get
-
-let internal mockState (startingHand: uint32 list) : State.state =
-    let board = mkBoard (ScrabbleUtil.StandardBoard.standardBoard ())
-
-    let dictAPI =
-        Some(Dictionary.empty, Dictionary.insert, Dictionary.step, Some Dictionary.reverse)
-
-    let dict = (ScrabbleUtil.Dictionary.mkDict words dictAPI) true
-
-    let playerId = 0u
-    let hand = MultiSet.ofList startingHand
-    let players = []
-    let playerTurn = 0u
-
-    State.mkState board dict playerId hand players playerTurn
-
-let sort (a: ScrabbleUtil.tile) (b: ScrabbleUtil.tile) =
-    let aux tile = tile |> Set.toSeq |> Seq.head |> fst
-
-    if a |> Set.count > 1 then -1
-    else if b |> Set.count > 1 then 1
-    else (aux a).CompareTo(aux b)
-
-let getSortedAndPieces () =
-    let tiles = ScrabbleUtil.English.tiles 1u |> List.map fst
-
-    let sorted = List.sortWith sort tiles
-
-    let pieces =
-        sorted
-        |> List.mapi (fun i tile -> (uint32 i, tile))
-        |> Map.ofList
-
-    (sorted, pieces)
-
+open Play
 
 [<Test>]
 let playWord () =
@@ -66,9 +15,11 @@ let playWord () =
     let lookupTable = getLookuptable sorted
 
     let state =
-        mockState [ getHandId 'A' lookupTable
-                    getHandId 'R' lookupTable
-                    getHandId 'E' lookupTable ]
+        mockState
+            [ getHandId 'A' lookupTable
+              getHandId 'R' lookupTable
+              getHandId 'E' lookupTable ]
+            defaultWords
 
     let state =
         State.placeLetters
@@ -91,9 +42,11 @@ let playWordDirect () =
     let lookupTable = getLookuptable sorted
 
     let state =
-        mockState [ getHandId 'A' lookupTable
-                    getHandId 'R' lookupTable
-                    getHandId 'E' lookupTable ]
+        mockState
+            [ getHandId 'A' lookupTable
+              getHandId 'R' lookupTable
+              getHandId 'E' lookupTable ]
+            defaultWords
 
     let state =
         State.placeLetters
@@ -118,10 +71,12 @@ let playFirstWord () =
     let lookupTable = getLookuptable sorted
 
     let state =
-        mockState [ getHandId 'A' lookupTable
-                    getHandId 'C' lookupTable
-                    getHandId 'R' lookupTable
-                    getHandId 'E' lookupTable ]
+        mockState
+            [ getHandId 'A' lookupTable
+              getHandId 'C' lookupTable
+              getHandId 'R' lookupTable
+              getHandId 'E' lookupTable ]
+            defaultWords
 
     let state = State.placeLetters Seq.empty state
 
@@ -134,145 +89,10 @@ let playFirstWord () =
     Assert.AreEqual(((0, 2), (5u, ('E', 1))), res |> List.item 3)
 
 [<Test>]
-let playWordDirectValidate () =
-    let sorted, _ = getSortedAndPieces ()
-
-    let lookupTable = getLookuptable sorted
-
-    let state =
-        mockState [ getHandId 'A' lookupTable
-                    getHandId 'R' lookupTable
-                    getHandId 'E' lookupTable ]
-
-    let state =
-        State.placeLetters
-            (Seq.ofList [ ((0, 0), (3u, ('C', 1)))
-                          ((0, 1), (1u, ('A', 1)))
-                          ((0, 2), (2u, ('B', 1)))
-                          ((0, 3), (12u, ('L', 1)))
-                          ((0, 4), (5u, ('E', 1))) ])
-            state
-
-    let move =
-        [ PlayedLetter((0, 0), (1u, ('C', 1)))
-          PlayLetter((1, 0), (1u, ('A', 1)))
-          PlayLetter((2, 0), (18u, ('R', 1)))
-          PlayLetter((3, 0), (5u, ('E', 1))) ]
-
-    Assert.IsTrue(validateMove state move)
-
-[<Test>]
-let invalidMove1 () =
-    let state = mockState []
-
-    let state =
-        State.placeLetters
-            (Seq.ofList [ ((0, 0), (1u, ('A', 1)))
-                          ((0, 1), (2u, ('B', 1)))
-                          ((0, 2), (12u, ('L', 1)))
-                          ((0, 3), (5u, ('E', 1)))
-                          ((1, 2), (9u, ('I', 1)))
-                          ((2, 2), (15u, ('O', 1)))
-                          ((3, 2), (14u, ('N', 1))) ])
-            state
-
-    let move =
-        [ PlayLetter((1, -2), (3u, ('C', 1)))
-          PlayLetter((1, -1), (1u, ('A', 1)))
-          PlayLetter((1, 0), (18u, ('R', 1)))
-          PlayLetter((1, 1), (5u, ('E', 1))) ]
-
-    Assert.IsFalse(validateMove state move)
-
-[<Test>]
-let invalidMove2 () =
-    let state = mockState []
-
-    let state =
-        State.placeLetters
-            (Seq.ofList [ ((0, 0), (1u, ('A', 1)))
-                          ((0, 1), (2u, ('B', 1)))
-                          ((0, 2), (12u, ('L', 1)))
-                          ((0, 3), (5u, ('E', 1))) ])
-            state
-
-    let move =
-        [ PlayLetter((1, -2), (3u, ('C', 1)))
-          PlayLetter((1, -1), (1u, ('A', 1)))
-          PlayLetter((1, 0), (18u, ('R', 1)))
-          PlayLetter((1, 1), (5u, ('E', 1))) ]
-
-    Assert.IsFalse(validateMove state move)
-
-[<Test>]
-let invalidMove3 () =
-    let state = mockState []
-
-    let state =
-        State.placeLetters
-            (Seq.ofList [ ((0, 0), (1u, ('A', 1)))
-                          ((0, 1), (2u, ('B', 1)))
-                          ((0, 2), (12u, ('L', 1)))
-                          ((0, 3), (5u, ('E', 1))) ])
-            state
-
-    let move =
-        [ PlayLetter((0, -1), (3u, ('C', 1)))
-          PlayLetter((1, -1), (1u, ('A', 1)))
-          PlayLetter((2, -1), (18u, ('R', 1)))
-          PlayLetter((3, -1), (5u, ('E', 1))) ]
-
-    Assert.IsTrue(validateMove state move)
-
-[<Test>]
-let invalidMove4 () =
-    let state = mockState []
-
-    let state =
-        State.placeLetters
-            (Seq.ofList [ ((0, -1), (3u, ('C', 1)))
-                          ((0, 0), (1u, ('A', 1)))
-                          ((0, 1), (2u, ('B', 1)))
-                          ((0, 2), (12u, ('L', 1)))
-                          ((0, 3), (5u, ('E', 1))) ])
-            state
-
-    let move =
-        [ PlayLetter((1, 1), (1u, ('A', 1)))
-          PlayLetter((2, 1), (18u, ('R', 1)))
-          PlayLetter((3, 1), (5u, ('E', 1))) ]
-
-    // "BARE" doesn't exist in the dictionary
-    Assert.IsFalse(validateMove state move)
-
-[<Test>]
-let invalidMove5 () =
-    let state = mockState []
-
-    let state =
-        State.placeLetters
-            (Seq.ofList [ ((0, -1), (3u, ('C', 1)))
-                          ((0, 0), (1u, ('A', 1)))
-                          ((0, 1), (2u, ('B', 1)))
-                          ((0, 2), (12u, ('L', 1)))
-                          ((0, 3), (5u, ('E', 1)))
-                          ((1, 2), (9u, ('I', 1)))
-                          ((2, 2), (15u, ('O', 1)))
-                          ((3, 2), (14u, ('N', 1))) ])
-            state
-
-    let move =
-        [ PlayLetter((1, 1), (1u, ('A', 1)))
-          PlayLetter((2, 1), (18u, ('R', 1)))
-          PlayLetter((3, 1), (5u, ('E', 1))) ]
-
-    Assert.IsFalse(validateMove state move)
-
-[<Test>]
 let playBlankWordDirect () =
     let _, pieces = getSortedAndPieces ()
 
-    let state = mockState [ 0u; 0u; 0u ]
+    let state = mockState [ 0u; 0u; 0u ] defaultWords
 
     let state =
         State.placeLetters
@@ -296,9 +116,11 @@ let playBlankInMiddleWordDirect () =
     let lookupTable = getLookuptable sorted
 
     let state =
-        mockState [ getHandId 'A' lookupTable
-                    0u
-                    getHandId 'E' lookupTable ]
+        mockState
+            [ getHandId 'A' lookupTable
+              0u
+              getHandId 'E' lookupTable ]
+            defaultWords
 
     let state =
         State.placeLetters
