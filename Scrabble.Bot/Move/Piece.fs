@@ -33,3 +33,8 @@ let getAllowedPieces allowedPieces =
     function
     | Normal a -> [ Normal a ]
     | Blank (id, _) -> Set.fold (fun acc piece -> Normal(id, (piece, 0)) :: acc) List.Empty allowedPieces
+
+let convertToPiece pieceId a =
+    match pieceId with
+    | 0u -> Blank(pieceId, Map.ofSeq a)
+    | _ -> Normal(pieceId, Seq.head a)

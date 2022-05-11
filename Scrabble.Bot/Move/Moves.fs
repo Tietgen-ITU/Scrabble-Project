@@ -22,12 +22,7 @@ let recordPlay
     : Plays =
     debugPrint $"Register play: (%d{pos |> fst}, %d{pos |> snd}) %A{c} creating word: %s{listToString word}\n"
 
-    let play =
-        match letterOnBoard with
-        | true -> PlayedLetter(pos, c)
-        | false -> PlayLetter(pos, c)
-
-    let played = (plays |> fst) @ [ play ]
+    let played = (plays |> fst) @ [ makePlay pos c letterOnBoard ]
 
     (played,
      if isWord && validateMove st played then
@@ -36,7 +31,7 @@ let recordPlay
          plays |> snd)
 
 let loopRack (f: Piece -> Piece list -> Plays) (rack: Piece list) (allowedLetters: Set<char>) : Plays =
-    let rec aux (rack': Piece list) (allowedLetters: Set<char>) (out: Plays) : Plays =
+    let rec aux (rack': Piece list) (out: Plays) : Plays =
         match rack' with
         | [] -> out
         | tile :: rack' ->
@@ -45,19 +40,18 @@ let loopRack (f: Piece -> Piece list -> Plays) (rack: Piece list) (allowedLetter
                     not (isBlank tile)
                     && pieceIsAllowed allowedLetters tile
                 then
-                    match (f
-                               tile
-                               (rack
-                                |> List.removeAt (rack |> List.findIndex (fun c -> c.Equals(tile)))))
-                        with
-                    | _, [] -> out
-                    | _, plays -> ([], plays @ (out |> snd))
+                    (rack
+                     |> List.removeAt (rack |> List.findIndex (fun c -> c.Equals(tile))))
+                    |> f tile
+                    |> function
+                        | _, [] -> out
+                        | _, plays -> ([], plays @ (out |> snd))
                 else
                     out
 
-            aux rack' allowedLetters out
+            aux rack' out
 
-    aux rack allowedLetters ([], [])
+    aux rack ([], [])
 
 let loopBlank
     (f: Piece -> Piece list -> Plays)
@@ -154,8 +148,11 @@ let rec genAux
     (arc: Dictionary.Dict)
     (plays: Plays)
     : Plays =
+    let goOn c rack arc valid plays =
+        goOn genAux state pieces anchor pos direction c word rack arc valid plays
+
     match getLetter (getNextCoordinate anchor pos direction) state with
-    | Some c -> goOn genAux state pieces anchor pos direction c word rack (nextArc c arc) true plays
+    | Some c -> goOn c rack (nextArc arc c) true plays
     | _ when rack.IsEmpty -> plays
     | None ->
         let allowedLetters = getAllowedLetters arc
@@ -163,43 +160,27 @@ let rec genAux
         let possiblePlays =
             loopRack
                 (fun c rack' ->
-                    goOn
-                        genAux
-                        state
-                        pieces
-                        anchor
-                        pos
-                        direction
-                        (getNormalPiece c)
-                        word
-                        rack'
-                        (nextArc (getNormalPiece c) arc)
-                        false
-                        plays)
+                    let normalPiece = getNormalPiece c
+
+                    goOn normalPiece rack' (nextArc arc normalPiece) false plays)
                 rack
                 allowedLetters
 
         let possiblePlays =
             if hasBlank rack && (possiblePlays |> snd) = [] then
                 let blank = List.find isBlank rack
-                let remaining = List.removeAt (List.findIndex isBlank rack) rack
+
+                let remaining =
+                    rack
+                    |> List.removeAt (List.findIndex isBlank rack)
+
                 let pl = (plays |> fst, possiblePlays |> snd)
 
                 loopBlank
                     (fun c r ->
-                        goOn
-                            genAux
-                            state
-                            pieces
-                            anchor
-                            pos
-                            direction
-                            (getNormalPiece c)
-                            word
-                            r
-                            (nextArc (getNormalPiece c) arc)
-                            false
-                            pl)
+                        let normalPiece = getNormalPiece c
+
+                        goOn normalPiece r (nextArc arc normalPiece) false pl)
                     blank
                     remaining
                     allowedLetters
@@ -228,7 +209,6 @@ let gen (state: State.state) (pieces: Map<uint32, tile>) (startPos: coord) (dir:
     else List.item 0 result |> snd
 
 let getNextMove (st: state) (pieces: Map<uint32, tile>) =
-
     let wordMailBox = createMoveMailbox st
 
     let createAsyncMoveCalculation coord dir =
@@ -246,15 +226,19 @@ let getNextMove (st: state) (pieces: Map<uint32, tile>) =
                 |> Map.toList
                 |> List.fold
                     (fun acc (coord, _) ->
+                        let isBeginingOfWord direction = isBeginingOfWord coord direction st
+
+                        let createAsyncMoveCalculation direction =
+                            createAsyncMoveCalculation coord direction
+
                         let horizontalMoveCalcAcc =
-                            if isBeginingOfWord coord Horizontal st then
-                                [ (createAsyncMoveCalculation coord Horizontal) ]
-                                @ acc
+                            if isBeginingOfWord Horizontal then
+                                [ (createAsyncMoveCalculation Horizontal) ] @ acc
                             else
                                 acc
 
-                        if isBeginingOfWord coord Vertical st then
-                            (createAsyncMoveCalculation coord Vertical)
+                        if isBeginingOfWord Vertical then
+                            (createAsyncMoveCalculation Vertical)
                             :: horizontalMoveCalcAcc
                         else
                             horizontalMoveCalcAcc)

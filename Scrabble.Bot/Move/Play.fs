@@ -12,11 +12,17 @@ type Play =
 
 type Plays = Play list * Play list list
 
-let getNormalWord =
-    List.map (fun play ->
-        match play with
-        | PlayLetter (c, (_, (l, p))) -> (c, (l, p))
-        | PlayedLetter (c, (_, (l, p))) -> (c, (l, p)))
+let makePlay pos c =
+    function
+    | true -> PlayedLetter(pos, c)
+    | false -> PlayLetter(pos, c)
+
+let getNormalTile =
+    function
+    | PlayLetter (c, (_, (l, p))) -> (c, (l, p))
+    | PlayedLetter (c, (_, (l, p))) -> (c, (l, p))
+
+let getNormalWord = List.map getNormalTile
 
 let getPlayMovesFromPlays (plays: Play list) : Move list =
     plays
