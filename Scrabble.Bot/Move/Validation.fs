@@ -18,10 +18,7 @@ let validateGetLetter (st: state) (coord: coord) (moves: Move list) : Option<Til
         | Some moveC -> if moveC.Equals(c) then Some c else None
         | None -> Some c // The coord is not in moves, so the letter on the board is valid
     | None -> // The coord is not on the board, so just return the move
-        match letterInMoves with // Option.bind should be able to do this, but i refuses for some reason
-        | Some (_, piece) -> Some piece
-        | None -> None
-
+        Option.bind (fun (_, piece) -> Some piece) letterInMoves
 
 let validateDirection
     (st: state)
@@ -42,24 +39,22 @@ let validateDirection
         else
             offset + 1
 
+    let getNextCoordinate coord offset =
+        getNextCoordinate coord offset direction
+
     let rec aux (offset: int32) (coord: coord) (dict: Dictionary.Dict) (valid: bool) =
-        match validateGetLetter st (getNextCoordinate coord offset direction) moves with
+        match validateGetLetter st (getNextCoordinate coord offset) moves with
         | Some c ->
-            match nextArc c dict with
+            match nextArc dict c with
             | Some (valid, newArc) -> aux (auxGetNextOffset offset) coord newArc valid
-            | None ->
-                debugPrint $"1. Can't go from %c{c |> snd |> fst} at %A{coord}\n"
-                false
+            | None -> false
         | _ ->
             if offset <= 0 then
                 // Switch direction
                 match Dictionary.reverse dict with
                 | Some (valid, newArc) -> aux 1 coord newArc valid
-                | None ->
-                    debugPrint $"2. Can't reverse at %A{coord}\n"
-                    false // TODO: Not entirely sure this is right, might have to use the valid value
+                | None -> false
             else
-                debugPrint $"Falling back to valid at %A{coord}\n"
                 valid
     // Start at -1 as the dictionary has already started at 0
     aux -1 coord dict valid
@@ -71,10 +66,13 @@ let validateMove (st: state) (plays: Play list) =
     // Each tested coord is added to the list of tested coords.
     // If the coord you are about to touch is already in the list of tested coords, then you have already tested it.
 
-    let testCoordAt st direction coord letter moves =
-        if testCoord st (getNextCoordinate coord 1 direction)
-           || testCoord st (getNextCoordinate coord -1 direction) then
-            match nextArc letter st.dict with
+    let testCoordAt direction coord letter moves =
+        let getNextCoordinate offset =
+            getNextCoordinate coord offset direction
+
+        if testCoord st (getNextCoordinate 1)
+           || testCoord st (getNextCoordinate -1) then
+            match nextArc st.dict letter with
             | Some (valid, newArc) -> validateDirection st direction coord newArc valid moves
             | None -> false
         else
@@ -84,9 +82,12 @@ let validateMove (st: state) (plays: Play list) =
         match moves' with
         | [] -> true
         | (coord, letter) :: rest ->
-            match testCoordAt st Horizontal coord letter moves with
+            let testCoordAt direction =
+                testCoordAt direction coord letter moves
+
+            match testCoordAt Horizontal with
             | true ->
-                match testCoordAt st Vertical coord letter moves with
+                match testCoordAt Vertical with
                 | true -> aux rest moves
                 | false -> false
             | false -> false
