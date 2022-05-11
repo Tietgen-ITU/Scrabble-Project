@@ -135,3 +135,50 @@ let playBlankInMiddleWordDirect () =
     Assert.AreEqual(PlayLetter((1, 0), (1u, ('A', 1))), res |> List.item 1)
     Assert.AreEqual(PlayLetter((2, 0), (0u, ('R', 0))), res |> List.item 2)
     Assert.AreEqual(PlayLetter((3, 0), (5u, ('E', 1))), res |> List.item 3)
+
+[<Test>]
+let findCareAllowedLetters () =
+    let sorted, pieces = getSortedAndPieces ()
+
+    let state =
+        mockState [] [ "CARE"; "CAR"; "SCAR" ]
+        |> CrossCheck.update [ ((0, 0), (3u, ('C', 1)))
+                               ((1, 0), (1u, ('A', 1)))
+                               ((2, 0), (2u, ('R', 1))) ]
+
+    let first = Map.find (-1, 0) state.crossCheck
+    let last = Map.find (3, 0) state.crossCheck
+
+    Assert.AreEqual((Set.ofList [ 'S' ]), first)
+    Assert.AreEqual((Set.ofList [ 'E' ]), last)
+
+[<Test>]
+let allowedLettersUpdates () =
+    let sorted, pieces = getSortedAndPieces ()
+
+    let move =
+        [ ((0, 0), (3u, ('A', 1)))
+          ((1, 0), (1u, ('R', 1)))
+          ((2, 0), (2u, ('E', 1))) ]
+
+    let state =
+        mockState [] [
+            "ARE"
+            "SCAREY"
+            "DCAREV"
+            "SCARE"
+        ]
+        |> CrossCheck.update move
+        |> State.placeLetters move
+
+    Assert.AreEqual((Set.ofList [ 'C' ]), Map.find (-1, 0) state.crossCheck)
+    Assert.AreEqual((Set.ofList [ 'Y'; 'V' ]), Map.find (3, 0) state.crossCheck)
+
+
+    let state =
+        state
+        |> CrossCheck.update [ ((-2, 0), (3u, ('S', 1)))
+                               ((-1, 0), (3u, ('C', 1))) ]
+
+    Assert.AreEqual((Set.ofList []), Map.find (-3, 0) state.crossCheck)
+    Assert.AreEqual((Set.ofList [ 'Y' ]), Map.find (3, 0) state.crossCheck)

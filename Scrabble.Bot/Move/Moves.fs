@@ -24,10 +24,14 @@ let recordPlay
 
     debugPrint $"Register play: (%d{pos |> fst}, %d{pos |> snd}) %A{c} creating word: %s{playListToString played}\n"
 
-    (played,
-     match isWord with
-     | true -> played :: getWords plays
-     | false -> getWords plays)
+    let words =
+        match isWord
+              && (getPlayMovesFromPlays played).Length >= 2
+            with
+        | true -> played :: getWords plays
+        | false -> getWords plays
+
+    (played, words)
 
 let goOn
     genAux // The genAux function defined below

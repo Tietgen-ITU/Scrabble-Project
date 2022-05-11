@@ -27,7 +27,7 @@ let getAllowedLetters (st: state) (coord: coord) : Set<char> =
 
 let determineLetterDirection (word: List<Move>) : Direction =
     match word.Length with
-    | 1 -> Horizontal
+    | 1 -> failwith "Cannot determine direction of a single letter"
     | _ ->
         match (List.item 1 word |> fst |> fst)
               - ((word.Head |> fst) |> fst)
@@ -93,6 +93,25 @@ let getAllowedDictLetters (dict: Dictionary.Dict) (allowedLetters: Set<char>) =
 
     aux dict (Set.toList allowedLetters) Set.empty
 
+let getEndLetters (dict: Dictionary.Dict) =
+    let rec aux (dict: Dictionary.Dict) (letters: Set<char>) =
+        let lettersFromHere =
+            match Dictionary.reverse dict with
+            | Some (_, newDict) -> Set.union (getAllowedDictLetters newDict alphabet) letters
+            | None -> letters
+
+        let all =
+            Set.map
+                (fun letter ->
+                    match Dictionary.step letter dict with
+                    | Some (_, newDict) -> aux newDict lettersFromHere
+                    | None -> Set.empty)
+                alphabet
+
+        Set.fold (fun state t -> Set.union t state) lettersFromHere all
+
+    aux dict Set.empty
+
 // For each coord:
 //   - Remove it from the board
 //   - Check vertically down until you hit a blank spot
@@ -111,17 +130,10 @@ let update (word: List<Move>) (st: state) : state =
 
         let wordEndP1Coord = getNextCoordinate wordEnd (goBackwardsOffset 0 dir) dir
 
-        let map' =
-            map
-            |> Map.add coord Set.empty
-            |> Map.add
-                wordStartP1Coord
-                (getAllowedDictLetters (wordStart |> snd) (getAllowedLetters st wordStartP1Coord))
-
-        match Dictionary.reverse (wordStart |> snd) with
-        | Some (_, newDict) ->
-            Map.add wordEndP1Coord (getAllowedDictLetters newDict (getAllowedLetters st wordStartP1Coord)) map'
-        | None -> Map.add wordEndP1Coord Set.empty map'
+        map
+        |> Map.add coord Set.empty
+        |> Map.add wordStartP1Coord (getAllowedDictLetters (wordStart |> snd) (getAllowedLetters st wordStartP1Coord))
+        |> Map.add wordEndP1Coord (getEndLetters (wordStart |> snd))
 
     let rec aux word dir map =
         match word with
