@@ -55,12 +55,12 @@ let addTileToHand st (tileId, amount: uint32) =
     { st with hand = (aux st.hand tileId amount) }
 
 let addPoints (playerId: uint32) points st =
-    { st with points = List.updateAt (int playerId - 1) (points + st.points.Item(int playerId - 1)) st.points }
+    let playerId = int playerId - 1
+    { st with points = List.updateAt playerId (points + st.points.Item(playerId)) st.points }
 
 let private (|FoundValue|_|) key map = Map.tryFind key map
 
 let placeLetter (tile: uint32 * (char * int)) (st: state) (coordinate: coord) =
-    // TODO: Place them on the board as well... and not only in the new map
     match st.tilePlacement with
     | FoundValue coordinate _ -> failwith "There is already a tile placed at that coordinate"
     | _ -> { st with tilePlacement = Map.add coordinate tile st.tilePlacement }
@@ -100,14 +100,13 @@ let updateBoard f st = { st with board = f st.board }
 let playerIsActive (st: state) = st.players.Item(int st.playerTurn - 1)
 
 let rec changeTurn (st: state) =
+    let aux (playerTurn: uint32) =
+        let st = { st with playerTurn = playerTurn }
+
+        match playerIsActive st with
+        | true -> st
+        | false -> changeTurn st
+
     match st.playerTurn >= uint32 st.players.Length with
-    | true ->
-        if playerIsActive { st with playerTurn = 1u } then
-            { st with playerTurn = 1u }
-        else
-            changeTurn { st with playerTurn = 1u }
-    | false ->
-        if playerIsActive { st with playerTurn = (st.playerTurn + 1u) } then
-            { st with playerTurn = (st.playerTurn + 1u) }
-        else
-            changeTurn { st with playerTurn = (st.playerTurn + 1u) }
+    | true -> aux 1u
+    | false -> aux (st.playerTurn + 1u)

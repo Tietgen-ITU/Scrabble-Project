@@ -7,13 +7,12 @@ let readLines filePath = System.IO.File.ReadLines(filePath)
 let defaultWords = [ "CABLE"; "CARE"; "ABLE" ]
 
 let getLookuptable pieces =
-    List.mapi
-        (fun id tile ->
-            if Set.count tile > 1 then
-                None
-            else
-                Some(tile |> Set.toSeq |> Seq.head |> fst, uint32 id))
-        pieces
+    pieces
+    |> List.mapi (fun id tile ->
+        match Set.count tile with
+        | 0
+        | 1 -> Some(tile |> Set.toSeq |> Seq.head |> fst, uint32 id)
+        | _ -> None)
     |> List.filter Option.isSome
     |> List.map Option.get
     |> Map.ofList

@@ -34,10 +34,9 @@ let validateDirection
     // if you hit a blank spot, validate that it is a valid word
 
     let auxGetNextOffset (offset: int32) =
-        if offset <= 0 then
-            offset - 1
-        else
-            offset + 1
+        match offset <= 0 with
+        | true -> offset - 1
+        | false -> offset + 1
 
     let getNextCoordinate coord offset =
         getNextCoordinate coord offset direction
@@ -49,13 +48,9 @@ let validateDirection
             | Some (valid, newArc) -> aux (auxGetNextOffset offset) coord newArc valid
             | None -> false
         | _ ->
-            if offset <= 0 then
-                // Switch direction
-                match Dictionary.reverse dict with
-                | Some (valid, newArc) -> aux 1 coord newArc valid
-                | None -> false
-            else
-                valid
+            match offset <= 0 with
+            | true -> switchDirection (fun valid newArc -> aux 1 coord newArc valid) false dict
+            | false -> valid
     // Start at -1 as the dictionary has already started at 0
     aux -1 coord dict valid
 
@@ -70,13 +65,14 @@ let validateMove (st: state) (plays: Play list) =
         let getNextCoordinate offset =
             getNextCoordinate coord offset direction
 
-        if testCoord st (getNextCoordinate 1)
-           || testCoord st (getNextCoordinate -1) then
+        match testCoord st (getNextCoordinate 1)
+              || testCoord st (getNextCoordinate -1)
+            with
+        | true ->
             match nextArc st.dict letter with
             | Some (valid, newArc) -> validateDirection st direction coord newArc valid moves
             | None -> false
-        else
-            true
+        | false -> true
 
     let rec aux moves' moves =
         match moves' with

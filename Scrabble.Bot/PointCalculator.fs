@@ -2,7 +2,6 @@ namespace DIB
 
 open ScrabbleUtil
 
-
 module internal PointCalculator =
 
     let private getSquare (coord: coord) (squares: Parser.boardFun2) =
@@ -15,12 +14,12 @@ module internal PointCalculator =
         | StateMonad.Success a -> a
         | StateMonad.Failure _ -> defvalue
 
-    let calculateWordPoint (word: (coord * (char * int)) list) (board: Parser.board) : int =
+    let calculateWordPoint (word: (coord * (uint32 * (char * int))) list) (board: Parser.board) : int =
         let mapToListFunc (word: (char * int) list) pos (square: Map<int, Parser.squareFun>) =
             Map.toList square
             |> List.map (fun (a, sqFun) -> (a, (sqFun word pos)))
 
-        let letters = List.map snd word
+        let letters = List.map (fun l -> (l |> snd |> snd)) word
 
         (*
             What is done below:

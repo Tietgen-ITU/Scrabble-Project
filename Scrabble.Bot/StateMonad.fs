@@ -52,10 +52,9 @@ let wordLength: SM<int> = S(fun s -> Success(s.word.Length, s))
 
 let getCharacter (pos: int) (f: char * int -> 'a) : SM<'a> =
     S (fun s ->
-        if pos >= s.word.Length || pos < 0 then
-            Failure(IndexOutOfBounds pos)
-        else
-            Success(s.word[pos] |> f, s))
+        match pos >= s.word.Length || pos < 0 with
+        | true -> Failure(IndexOutOfBounds pos)
+        | false -> Success(s.word[pos] |> f, s))
 
 let characterValue (pos: int) : SM<char> = getCharacter pos fst
 

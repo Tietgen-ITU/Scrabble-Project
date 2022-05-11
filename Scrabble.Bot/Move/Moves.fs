@@ -15,20 +15,19 @@ let recordPlay
     (st: state)
     (pos: coord)
     (c: uint32 * (char * int))
-    (word: (uint32 * (char * int)) list)
     (isWord: bool)
     (letterOnBoard: bool)
     (plays: Plays)
     : Plays =
-    debugPrint $"Register play: (%d{pos |> fst}, %d{pos |> snd}) %A{c} creating word: %s{listToString word}\n"
 
     let played = (plays |> fst) @ [ makePlay pos c letterOnBoard ]
 
+    debugPrint $"Register play: (%d{pos |> fst}, %d{pos |> snd}) %A{c} creating word: %s{playListToString played}\n"
+
     (played,
-     if isWord && validateMove st played then
-         played :: (plays |> snd)
-     else
-         plays |> snd)
+     match isWord && validateMove st played with
+     | true -> played :: getWords plays
+     | false -> getWords plays)
 
 let loopPiece
     (goNext: (uint32 * (char * int)) -> Piece list -> Plays)
@@ -64,7 +63,8 @@ let loopRack
         | [] -> out
         | tile :: rack' ->
             let out =
-                if pieceIsAllowed allowedLetters tile then
+                match pieceIsAllowed allowedLetters tile with
+                | true ->
                     loopPiece
                         f
                         (rack
@@ -72,8 +72,7 @@ let loopRack
                         (Seq.toList allowedLetters)
                         tile
                         out
-                else
-                    out
+                | false -> out
 
             aux rack' allowedLetters out
 
@@ -82,81 +81,66 @@ let loopRack
 let goOn
     genAux // The genAux function defined below
     (st: state)
-    (pieces: Map<uint32, tile>) // TODO: I really don't like having to pass around the state and pieces if we don't need it in all the methods. Maybe we should move recordPlay to a lambda function, it would help with code duplication as well
     (anchor: coord)
     (pos: int32)
     (direction: Direction)
     (l: uint32 * (char * int))
-    (word: (uint32 * (char * int)) list)
     (rack: Piece list)
     (newArc: (bool * Dictionary.Dict) option)
     (letterOnBoard: bool)
     (plays: Plays)
     : Plays =
-    let leftCoord = getNextCoordinate anchor (pos - 1) direction
-    let rightCoord = getNextCoordinate anchor (pos + 1) direction
+    let hasRoom off =
+        let coord = getNextCoordinate anchor (pos + off) direction
 
-    let roomToTheLeft =
-        not (hasLetter leftCoord st.tilePlacement)
-        && hasSquare st.board leftCoord
+        not (hasLetter coord st.tilePlacement)
+        && hasSquare st.board coord
 
-    let roomToTheRight =
-        not (hasLetter rightCoord st.tilePlacement)
-        && hasSquare st.board rightCoord
+    let genAux pos newArc plays =
+        genAux st anchor pos direction rack newArc plays
 
-    if pos <= 0 then // Moving left
-        let word = [ l ] @ word
+    let getPlays hasRoom newArc isWord offset =
+        match hasRoom with
+        | true ->
+            recordPlay st (getNextCoordinate anchor pos direction) l isWord letterOnBoard plays
+            |> genAux (pos + offset) newArc
+        | false -> plays
 
+    let roomToTheLeft = hasRoom -1
+    let roomToTheRight = hasRoom 1
+    let roomAround = roomToTheLeft && roomToTheRight
+
+    match pos <= 0 with // Moving left
+    | true ->
         match newArc with
         | Some (isWord, newArc) -> // We are on the old arc
             // Letter is on oldarc and there is no letter directly to the left
-            let plays =
-                match roomToTheLeft with
-                | true ->
-                    recordPlay st (getNextCoordinate anchor pos direction) l word isWord letterOnBoard plays
-                    |> genAux st pieces anchor (pos - 1) direction word rack newArc
-                | false -> plays
+            let plays = getPlays roomToTheLeft newArc isWord -1
 
-            // Switch direction
-            match (Dictionary.reverse newArc) with
-            | None -> plays
-            | Some (_, newArc) ->
-                if roomToTheLeft && roomToTheRight then
-                    genAux st pieces anchor 1 direction word rack newArc plays
-                else
-                    plays
-        | None ->
-            debugPrint $"Not on old arc: offset: %d{pos}, (%d{anchor |> fst}, %d{anchor |> snd}) %c{l |> snd |> fst}\n" // TODO: No clue if this ever happens, or how to handle it
-
-            plays
-    else
-        let word = word @ [ l ]
-
+            switchDirection
+                (fun _ newArc ->
+                    match roomAround with
+                    | true -> genAux 1 newArc plays
+                    | false -> plays)
+                plays
+                newArc
+        | None -> plays
+    | false ->
         match newArc with
-        | Some (isWord, newArc) ->
-            match roomToTheRight with
-            | true ->
-                recordPlay st (getNextCoordinate anchor pos direction) l word isWord letterOnBoard plays
-                |> genAux st pieces anchor (pos + 1) direction word rack newArc
-            | false -> plays
-        | None ->
-            debugPrint $"Not on old arc: offset: %d{pos}, (%d{anchor |> fst}, %d{anchor |> snd}) %c{l |> snd |> fst}\n" // TODO: No clue if this ever happens, or how to handle it
-
-            plays
+        | Some (isWord, newArc) -> getPlays roomToTheRight newArc isWord 1
+        | None -> plays
 
 let rec genAux
     (state: State.state)
-    (pieces: Map<uint32, tile>)
     (anchor: coord)
     (pos: int32)
     (direction: Direction)
-    (word: (uint32 * (char * int)) list)
     (rack: Piece list)
     (arc: Dictionary.Dict)
     (plays: Plays)
     : Plays =
     let goOn c rack arc valid plays =
-        goOn genAux state pieces anchor pos direction c word rack arc valid plays
+        goOn genAux state anchor pos direction c rack arc valid plays
 
     match getLetter (getNextCoordinate anchor pos direction) state with
     | Some c -> goOn c rack (nextArc arc c) true plays
@@ -169,26 +153,24 @@ let rec genAux
 
         match possiblePlays with
         | _, [] ->
-            debugPrint $"Cannot play: %s{listToString word}\n"
+            debugPrint $"Cannot play: %s{playsToString plays}\n"
             plays
         | plays -> plays
 
 let gen (state: State.state) (pieces: Map<uint32, tile>) (startPos: coord) (dir: Direction) : Play list =
     let pos = 0 // Should always be 0 when starting
-    let word = List.Empty
     let rack = getRack state pieces // Retrieve our current hand
     let initArc = state.dict
 
     let result =
-        genAux state pieces startPos pos dir word rack initArc ([], [])
+        genAux state startPos pos dir rack initArc ([], [])
         |> snd
         |> List.map (fun x -> (DIB.PointCalculator.calculateWordPoint (getNormalWord x) state.board, x))
         |> List.sortByDescending (fun (points, _) -> points)
 
-    if result.IsEmpty then
-        []
-    else
-        List.item 0 result |> snd
+    match result with
+    | [] -> List.Empty
+    | _ -> List.item 0 result |> snd
 
 let getNextMove (st: state) (pieces: Map<uint32, tile>) =
     let wordMailBox = createMoveMailbox st
@@ -200,19 +182,18 @@ let getNextMove (st: state) (pieces: Map<uint32, tile>) =
         }
 
     let wordResult =
-        if st.tilePlacement.IsEmpty then
-            gen st pieces st.board.center Vertical
-        else
+        match st.tilePlacement with
+        | x when x.IsEmpty -> gen st pieces st.board.center Vertical
+        | _ ->
             let asyncCalculation =
                 st.tilePlacement
                 |> Map.toList
                 |> List.fold
                     (fun acc (coord, _) ->
                         let moveCalcAcc dir acc =
-                            if isBeginingOfWord coord dir st then
-                                (createAsyncMoveCalculation coord dir) :: acc
-                            else
-                                acc
+                            match isBeginingOfWord coord dir st with
+                            | true -> (createAsyncMoveCalculation coord dir) :: acc
+                            | false -> acc
 
                         let horizontalMoveCalcAcc = moveCalcAcc Horizontal acc
                         moveCalcAcc Vertical horizontalMoveCalcAcc)
@@ -229,7 +210,6 @@ let getNextMove (st: state) (pieces: Map<uint32, tile>) =
             wordMailBox.TryPostAndReply(RequestValue, 2000)
             |> Option.defaultValue []
 
-    if wordResult.Length = 0 then
-        None
-    else
-        Some(getPlayMovesFromPlays wordResult)
+    match wordResult with
+    | [] -> None
+    | _ -> Some(getPlayMovesFromPlays wordResult)

@@ -27,10 +27,9 @@ let arith0Sens (a: SM<int>) (b: SM<int>) (f: int -> int -> int) =
     >>= (fun x ->
         b
         >>= (fun y ->
-            if y = 0 then
-                fail DivisionByZero
-            else
-                ret (f x y)))
+            match y = 1 with
+            | false -> ret (f x y)
+            | true -> fail DivisionByZero))
 
 let div a b = arith0Sens a b (fun x y -> x / y)
 let modulo a b = arith0Sens a b (fun x y -> x % y)

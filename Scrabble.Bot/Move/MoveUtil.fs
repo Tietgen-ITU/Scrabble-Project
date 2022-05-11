@@ -9,6 +9,14 @@ open Play
 let listToString (chars: Tile list) =
     string (List.fold (fun (sb: StringBuilder) c -> sb.Append(char (c |> snd |> fst))) (StringBuilder()) chars)
 
+let playListToString (plays: Play list) : string =
+    plays
+    |> getNormalWord
+    |> List.map snd
+    |> listToString
+
+let playsToString (plays: Plays) : string = plays |> fst |> playListToString
+
 let returnPlays (plays: Plays) : Plays = ([], plays |> snd)
 
 let testCoord (st: state) (coord: coord) = hasLetter coord st.tilePlacement
@@ -30,7 +38,11 @@ let getBestMove (state: State.state) (currentBest: int * Play list) (newPlay: Pl
     let newPoints =
         DIB.PointCalculator.calculateWordPoint (getNormalWord newPlay) state.board
 
-    if newPoints > (fst currentBest) then
-        (newPoints, newPlay)
-    else
-        currentBest
+    match newPoints > (fst currentBest) with
+    | true -> (newPoints, newPlay)
+    | false -> currentBest
+
+let switchDirection f (defaultValue: 'a) (dict: Dictionary.Dict) : 'a =
+    match Dictionary.reverse dict with
+    | Some (valid, newArc) -> f valid newArc
+    | None -> defaultValue

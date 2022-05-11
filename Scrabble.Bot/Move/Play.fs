@@ -19,8 +19,8 @@ let makePlay pos c =
 
 let getNormalTile =
     function
-    | PlayLetter (c, (_, (l, p))) -> (c, (l, p))
-    | PlayedLetter (c, (_, (l, p))) -> (c, (l, p))
+    | PlayLetter t -> t
+    | PlayedLetter t -> t
 
 let getNormalWord = List.map getNormalTile
 
@@ -32,3 +32,5 @@ let getPlayMovesFromPlays (plays: Play list) : Move list =
         | PlayedLetter _ -> None)
     |> List.filter Option.isSome
     |> List.map Option.get
+
+let getWords (plays: Plays) = plays |> snd
