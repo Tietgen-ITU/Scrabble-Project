@@ -40,7 +40,7 @@ let loopPiece
     let letters =
         match tile with
         | Normal a -> [ a ]
-        | Blank _ -> List.map (fun x -> (0u, (x, 0))) allowedLetters
+        | Blank _ -> [List.map (fun x -> (0u, (x, 0))) allowedLetters |> List.item 0]
 
     let rec goThrough lts plays =
         match lts with
@@ -54,6 +54,7 @@ let loopPiece
 
 
 let loopRack (f: uint32 * (char * int) -> Piece list -> Plays) (rack: Piece list) (allowedLetters: Set<char>) : Plays =
+
     let rec aux (rack': Piece list) (allowedLetters: Set<char>) (out: Plays) : Plays =
         match rack' with
         | [] -> out
@@ -72,7 +73,10 @@ let loopRack (f: uint32 * (char * int) -> Piece list -> Plays) (rack: Piece list
 
             aux rack' allowedLetters out
 
-    aux rack allowedLetters ([], [])
+    let res = aux rack allowedLetters ([], [])
+
+
+    res
 
 let goOn
     genAux // The genAux function defined below
@@ -156,11 +160,15 @@ let gen (state: State.state) (pieces: Map<uint32, tile>) (startPos: coord) (dir:
     let rack = getRack state pieces // Retrieve our current hand
     let initArc = state.dict
 
+    let stopWatch = System.Diagnostics.Stopwatch.StartNew()
+
     let result =
         genAux state startPos pos dir rack initArc ([], [])
         |> snd
         |> List.map (fun x -> (DIB.PointCalculator.calculateWordPoint (getNormalWord x) state.board, x))
         |> List.sortByDescending fst
+
+    stopWatch.Stop()
 
     match result with
     | [] -> List.Empty
@@ -194,8 +202,8 @@ let getNextMove (st: state) (pieces: Map<uint32, tile>) =
                     List.Empty
 
             let cts = new System.Threading.CancellationTokenSource()
-
-            Async.Parallel(asyncCalculation, System.Environment.ProcessorCount)
+            
+            Async.Parallel asyncCalculation
             |> fun comp ->
                 Async.RunSynchronously(comp, 1000, cts.Token)
                 |> ignore
