@@ -15,6 +15,7 @@ type state =
       hand: MultiSet.MultiSet<uint32>
       players: List<bool>
       playerTurn: uint32
+      crossCheck: Map<coord, Set<char>>
       tilePlacement: Map<coord, uint32 * (char * int)> }
 
 let mkState b d pn h pl pt =
@@ -25,7 +26,8 @@ let mkState b d pn h pl pt =
       players = pl
       playerTurn = pt
       tilePlacement = Map.empty<coord, uint32 * (char * int)>
-      points = [ for _ in 1 .. pl.Length -> 0 ] }
+      points = [ for _ in 1 .. pl.Length -> 0 ] 
+      crossCheck = Map.empty }
 
 type Direction =
     | Horizontal
