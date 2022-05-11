@@ -14,7 +14,7 @@ let spawnMultiples name dict bot =
     let rec aux =
         function
         | 0 -> []
-        | x -> ( $"%s{name}%d{x}", dict, bot) :: aux (x - 1)
+        | x -> ($"%s{name}%d{x}", dict, bot) :: aux (x - 1)
 
     aux >> List.rev
 
@@ -54,8 +54,7 @@ let main _ =
 
     // Uncomment this line to call your client
 
-    let dictionary, _ =
-        time (fun () -> ScrabbleUtil.Dictionary.mkDict words dictAPI)
+    let dictionary, _ = time (fun () -> ScrabbleUtil.Dictionary.mkDict words dictAPI)
 
     let ourPlayers =
         [ // ("De imperative banditter 1", dictionary, DIB.Scrabble.startGame)

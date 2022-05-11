@@ -106,7 +106,7 @@ let playWordDirect () =
 
     let res = gen state pieces (0, 0) State.Horizontal
     printf $"%A{res}\n"
-    Assert.AreEqual(PlayedLetter ((0,0), (3u, ('C', 1))), res |> List.head |> List.item 0)
+    Assert.AreEqual(PlayedLetter((0, 0), (3u, ('C', 1))), res |> List.head |> List.item 0)
     Assert.AreEqual(PlayLetter((1, 0), (1u, ('A', 1))), res |> List.head |> List.item 1)
     Assert.AreEqual(PlayLetter((2, 0), (18u, ('R', 1))), res |> List.head |> List.item 2)
     Assert.AreEqual(PlayLetter((3, 0), (5u, ('E', 1))), res |> List.head |> List.item 3)
@@ -272,10 +272,7 @@ let invalidMove5 () =
 let playBlankWordDirect () =
     let _, pieces = getSortedAndPieces ()
 
-    let state =
-        mockState [ 0u
-                    0u
-                    0u ]
+    let state = mockState [ 0u; 0u; 0u ]
 
     let state =
         State.placeLetters

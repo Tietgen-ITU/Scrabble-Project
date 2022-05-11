@@ -5,9 +5,9 @@ open ScrabbleUtil
 open ScrabbleUtil.DebugPrint
 open System.Text
 
-type Piece = 
+type Piece =
     | Normal of (uint32 * (char * int))
-    | Blank of (uint32 * Map<char, int>) 
+    | Blank of (uint32 * Map<char, int>)
 
 type Tile = uint32 * (char * int)
 
@@ -19,62 +19,76 @@ type Play =
 
 type Plays = Play list * Play list list
 
-let isBlank = function
+let isBlank =
+    function
     | Normal _ -> false
     | Blank _ -> true
 
-let hasBlank = 
-    List.exists isBlank 
+let hasBlank = List.exists isBlank
 
-let getNormalPiece = function
+let getNormalPiece =
+    function
     | Normal a -> a
     | _ -> failwith "this is not a normal piece"
 
-let getPieceAsBlank = function
+let getPieceAsBlank =
+    function
     | Normal _ -> failwith "this is not a blank piece"
     | Blank a -> a
 
-let pieceIsAllowed allowedLetters = function
+let pieceIsAllowed allowedLetters =
+    function
     | Normal (_, (ch, _)) -> Set.contains ch allowedLetters
     | Blank _ -> true
 
 (*
-    Provides with a list of normal pieces. 
+    Provides with a list of normal pieces.
     If the Piece is of type Blank then the blank will return a list of normal pieces with all the letters in the allowedLetters
 *)
-let getAllowedPieces allowedPieces = function
-    | Normal a -> [Normal a]
-    | Blank (id, _) -> Set.fold (fun acc piece -> Normal (id, (piece, 0)) :: acc) List.Empty allowedPieces
-type MessageRequest<'a> = 
+let getAllowedPieces allowedPieces =
+    function
+    | Normal a -> [ Normal a ]
+    | Blank (id, _) -> Set.fold (fun acc piece -> Normal(id, (piece, 0)) :: acc) List.Empty allowedPieces
+
+type MessageRequest<'a> =
     | SetValue of 'a
     | RequestValue of AsyncReplyChannel<'a>
 
-let getNormalWord = 
-    List.map (fun play -> match play with
-                            | PlayLetter (c,(_,(l,p))) -> (c,(l,p))
-                            | PlayedLetter (c,(_,(l,p))) -> (c,(l,p))
-                            )
+let getNormalWord =
+    List.map (fun play ->
+        match play with
+        | PlayLetter (c, (_, (l, p))) -> (c, (l, p))
+        | PlayedLetter (c, (_, (l, p))) -> (c, (l, p)))
 
 let getBestMove (state: State.state) (currentBest: int * Play list) (newPlay: Play list) =
-    let newList = List.map (fun play -> match play with
-                                                                            | PlayLetter (c,(_,(l,p))) -> (c,(l,p))
-                                                                            | PlayedLetter (c,(_,(l,p))) -> (c,(l,p))
-                                                        ) newPlay
-    let newPoints = DIB.PointCalculator.calculateWordPoint newList state.board
-    if newPoints > (fst currentBest) then (newPoints, newPlay) else currentBest
+    let newList =
+        List.map
+            (fun play ->
+                match play with
+                | PlayLetter (c, (_, (l, p))) -> (c, (l, p))
+                | PlayedLetter (c, (_, (l, p))) -> (c, (l, p)))
+            newPlay
 
-let createMoveMailbox st = 
-    MailboxProcessor.Start(fun inbox -> 
-        let rec loop word = 
+    let newPoints = DIB.PointCalculator.calculateWordPoint newList state.board
+
+    if newPoints > (fst currentBest) then
+        (newPoints, newPlay)
+    else
+        currentBest
+
+let createMoveMailbox st =
+    MailboxProcessor.Start (fun inbox ->
+        let rec loop word =
             async {
                 let! msg = inbox.Receive()
+
                 match msg with
                 | SetValue newWord -> return! loop (getBestMove st word newWord)
-                | RequestValue replyCh -> 
-                    replyCh.Reply (snd word)
+                | RequestValue replyCh ->
+                    replyCh.Reply(snd word)
                     return! loop word
             }
-        
+
 
         loop (0, []))
 
@@ -86,17 +100,24 @@ let returnPlays (plays: Plays) : Plays = ([], plays |> snd)
 let getRack (state: State.state) (pieces: Map<uint32, tile>) : Piece list =
     let convertToPiece pieceId a =
         match pieceId with
-        | 0u -> Blank (pieceId, Map.ofSeq a)
-        | _ -> Normal (pieceId, Seq.head a)
+        | 0u -> Blank(pieceId, Map.ofSeq a)
+        | _ -> Normal(pieceId, Seq.head a)
 
-    let rec createPieces rack piece pieces = function
+    let rec createPieces rack piece pieces =
+        function
         | 0u -> rack
-        | x -> createPieces ((Map.find piece pieces |> Set.toSeq |> convertToPiece piece ) :: rack) piece pieces (x-1u)
+        | x ->
+            createPieces
+                ((Map.find piece pieces
+                  |> Set.toSeq
+                  |> convertToPiece piece)
+                 :: rack)
+                piece
+                pieces
+                (x - 1u)
 
     state.hand
-    |> MultiSet.fold
-        (fun rack piece -> createPieces rack piece pieces)
-        []
+    |> MultiSet.fold (fun rack piece -> createPieces rack piece pieces) []
 
 let testCoord (st: state) (coord: coord) = hasLetter coord st.tilePlacement
 
@@ -244,21 +265,20 @@ let getAllowedLetters (dict: Dictionary.Dict) =
 
     aux dict alphabet Set.empty
 
-let loopRack
-    (f: Piece -> Piece list -> Plays)
-    (rack: Piece list)
-    (allowedLetters: Set<char>)
-    : Plays =
+let loopRack (f: Piece -> Piece list -> Plays) (rack: Piece list) (allowedLetters: Set<char>) : Plays =
     let rec aux (rack': Piece list) (allowedLetters: Set<char>) (out: Plays) : Plays =
         match rack' with
         | [] -> out
         | tile :: rack' ->
             let out =
-                if not(isBlank tile) && pieceIsAllowed allowedLetters tile then
+                if
+                    not (isBlank tile)
+                    && pieceIsAllowed allowedLetters tile
+                then
                     match (f
-                            tile
-                            (rack
-                            |> List.removeAt (rack |> List.findIndex (fun c -> c.Equals(tile)))))
+                               tile
+                               (rack
+                                |> List.removeAt (rack |> List.findIndex (fun c -> c.Equals(tile)))))
                         with
                     | _, [] -> out
                     | _, plays -> ([], plays @ (out |> snd))
@@ -273,13 +293,13 @@ let loopBlank
     (f: Piece -> Piece list -> Plays)
     (blank: Piece)
     (restOfTheRack: Piece list)
-    (allowedLetters: Set<char>) 
+    (allowedLetters: Set<char>)
     : Plays =
     let rec aux blankLetters rack out : Plays =
-        match blankLetters with 
+        match blankLetters with
         | [] -> out
-        | tile :: blankLetters' -> 
-            let out = 
+        | tile :: blankLetters' ->
+            let out =
                 match (f tile rack) with
                 | _, [] -> out
                 | _, plays -> ([], plays @ (out |> snd))
@@ -373,35 +393,56 @@ let rec genAux
         let possiblePlays =
             loopRack
                 (fun c rack' ->
-                    goOn genAux state pieces anchor pos direction (getNormalPiece c) word rack' (nextArc (getNormalPiece c) arc) false plays)
+                    goOn
+                        genAux
+                        state
+                        pieces
+                        anchor
+                        pos
+                        direction
+                        (getNormalPiece c)
+                        word
+                        rack'
+                        (nextArc (getNormalPiece c) arc)
+                        false
+                        plays)
                 rack
                 allowedLetters
 
         let possiblePlays =
             if hasBlank rack && (possiblePlays |> snd) = [] then
                 let blank = List.find isBlank rack
-                let remaining = List.removeAt (List.findIndex isBlank rack) rack 
+                let remaining = List.removeAt (List.findIndex isBlank rack) rack
                 let pl = (plays |> fst, possiblePlays |> snd)
 
-                loopBlank 
-                    (fun c r -> goOn genAux state pieces anchor pos direction (getNormalPiece c) word r (nextArc (getNormalPiece c) arc) false pl)
+                loopBlank
+                    (fun c r ->
+                        goOn
+                            genAux
+                            state
+                            pieces
+                            anchor
+                            pos
+                            direction
+                            (getNormalPiece c)
+                            word
+                            r
+                            (nextArc (getNormalPiece c) arc)
+                            false
+                            pl)
                     blank
                     remaining
                     allowedLetters
-            else possiblePlays
-        
+            else
+                possiblePlays
+
         match possiblePlays with
         | _, [] ->
             debugPrint $"Cannot play: %s{listToString word}\n"
             plays
         | plays -> plays
 
-let gen
-    (state: State.state)
-    (pieces: Map<uint32, tile>)
-    (startPos: coord)
-    (dir: Direction)
-    : Play list list =
+let gen (state: State.state) (pieces: Map<uint32, tile>) (startPos: coord) (dir: Direction) : Play list list =
 
     let pos = 0 // Should always be 0 when starting
     let word = List.Empty
@@ -418,7 +459,7 @@ let getNextMove (st: state) (pieces: Map<uint32, tile>) =
     let createAsyncMoveCalculation coord dir =
         async {
             gen st pieces coord dir
-            |> Seq.iter (fun item -> wordMailBox.Post (SetValue item))
+            |> Seq.iter (fun item -> wordMailBox.Post(SetValue item))
         }
 
     let wordResult =
@@ -427,7 +468,8 @@ let getNextMove (st: state) (pieces: Map<uint32, tile>) =
             |> List.filter (fun word -> not <| List.isEmpty word)
             |> List.map (fun x -> (DIB.PointCalculator.calculateWordPoint (getNormalWord x) st.board, x))
             |> List.sortByDescending fst
-            |> List.item 0 |> snd
+            |> List.item 0
+            |> snd
         else
             let asyncCalculation =
                 st.tilePlacement
@@ -436,19 +478,25 @@ let getNextMove (st: state) (pieces: Map<uint32, tile>) =
                     (fun acc (coord, _) ->
                         let horizontalMoveCalcAcc =
                             if isBeginingOfWord coord Horizontal st then
-                                [ (createAsyncMoveCalculation coord Horizontal) ] @ acc
-                            else acc
-                        
+                                [ (createAsyncMoveCalculation coord Horizontal) ]
+                                @ acc
+                            else
+                                acc
+
                         if isBeginingOfWord coord Vertical st then
-                            (createAsyncMoveCalculation coord Vertical) :: horizontalMoveCalcAcc
-                        else horizontalMoveCalcAcc)
+                            (createAsyncMoveCalculation coord Vertical)
+                            :: horizontalMoveCalcAcc
+                        else
+                            horizontalMoveCalcAcc)
                     List.Empty
-                
+
             let cts = new System.Threading.CancellationTokenSource()
 
-            Async.Parallel (asyncCalculation, System.Environment.ProcessorCount)
-            |> fun comp -> Async.RunSynchronously (comp, 1000, cts.Token) |> ignore
-            
+            Async.Parallel(asyncCalculation, System.Environment.ProcessorCount)
+            |> fun comp ->
+                Async.RunSynchronously(comp, 1000, cts.Token)
+                |> ignore
+
             // Return the best result of the computation
             wordMailBox.PostAndReply(RequestValue, 2000)
 

@@ -11,8 +11,7 @@ let hello =
       ('L', 1)
       ('O', 1) ]
 
-let state =
-    mkState [ ("x", 5); ("y", 42) ] hello [ "_pos_"; "_result_" ]
+let state = mkState [ ("x", 5); ("y", 42) ] hello [ "_pos_"; "_result_" ]
 
 let emptyState = mkState [] [] []
 
@@ -81,8 +80,7 @@ let (.&&.) b1 b2 = Conj(b1, b2)
 let (.||.) b1 b2 =
     ~~(~~b1 .&&. ~~b2) (* boolean disjunction *)
 
-let (.->.) b1 b2 =
-    ~~b1 .||. b2 (* boolean implication *)
+let (.->.) b1 b2 = ~~b1 .||. b2 (* boolean implication *)
 
 let (.=.) a b = AEq(a, b)
 let (.<.) a b = ALt(a, b)

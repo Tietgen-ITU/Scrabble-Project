@@ -44,8 +44,7 @@ let playerTurn st = st.playerTurn
 let removeTileFromHand st tileId =
     { st with hand = MultiSet.removeSingle tileId st.hand }
 
-let removeTilesFromHand (tileIds: List<uint32>) st =
-    List.fold removeTileFromHand st tileIds
+let removeTilesFromHand (tileIds: List<uint32>) st = List.fold removeTileFromHand st tileIds
 
 let addTileToHand st (tileId, amount: uint32) =
     let rec aux ms id =
@@ -88,7 +87,8 @@ let isBeginingOfWord pos orientation st =
         | Vertical -> (pos |> fst, (pos |> snd) + 1)
         | Horizontal -> ((pos |> fst) - 1, pos |> snd)
 
-    not(hasSquare st.board adjacentCoord) || not(hasLetter adjacentCoord st.tilePlacement)
+    not (hasSquare st.board adjacentCoord)
+    || not (hasLetter adjacentCoord st.tilePlacement)
 
 (*
     Updates the board with the function provided. This is created as there are a lot of different

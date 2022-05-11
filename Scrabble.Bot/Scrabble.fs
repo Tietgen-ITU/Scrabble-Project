@@ -42,11 +42,12 @@ module Scrabble =
 
         let rec aux (st: State.state) =
             Print.printHand pieces (State.hand st)
-            
+
             if st.playerTurn = st.playerId then
-                let move = 
+                let move =
 
                     let mv = Moves.getNextMove st pieces
+
                     match mv with
                     | Some a -> SMPlay a
                     | None -> SMPass
@@ -87,7 +88,7 @@ module Scrabble =
                 (*The player failed to make a move.. let the next player have the turn*)
                 let st' = State.changeTurn st
                 aux st'
-            | RCM (CMForfeit pid) -> 
+            | RCM (CMForfeit pid) ->
                 let st' = State.removePlayer st (int pid)
                 aux st'
             | RCM a -> failwith $"not implmented: %A{a}"
@@ -109,7 +110,8 @@ module Scrabble =
         (timeout: uint32 option)
         (cstream: Stream)
         =
-        debugPrint $"Starting game!
+        debugPrint
+            $"Starting game!
                       number of players = %d{numPlayers}
                       player id = %d{playerId}
                       player turn = %d{playerTurn}
