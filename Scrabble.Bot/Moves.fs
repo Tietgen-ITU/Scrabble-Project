@@ -247,8 +247,32 @@ let getAllowedLetters (dict: Dictionary.Dict) =
 
     aux dict alphabet Set.empty
 
+let loopPiece 
+    (goNext: (uint32 * (char * int)) -> Piece list -> Plays) 
+    restOfTheRack 
+    allowedLetters 
+    tile 
+    currentPlays
+    : Plays = 
+
+    let letters = 
+        match tile with
+        | Normal a -> [a]
+        | Blank _ -> List.map (fun x -> (0u, (x, 0))) allowedLetters
+
+    let rec goThrough lts plays = 
+        match lts with
+        | [] -> plays
+        | ch :: restOfLetters -> 
+            match (goNext ch restOfTheRack) with
+            | (_, []) -> goThrough restOfLetters plays
+            | (_, newPlays) -> goThrough restOfLetters ([], newPlays @ (plays |> snd)) 
+
+    goThrough letters currentPlays
+    
+
 let loopRack
-    (f: Piece -> Piece list -> Plays)
+    (f: (uint32 * (char * int)) -> Piece list -> Plays)
     (rack: Piece list)
     (allowedLetters: Set<char>)
     : Plays =
@@ -257,39 +281,19 @@ let loopRack
         | [] -> out
         | tile :: rack' ->
             let out =
-                if not(isBlank tile) && pieceIsAllowed allowedLetters tile then
-                    match (f
-                            tile
-                            (rack
-                            |> List.removeAt (rack |> List.findIndex (fun c -> c.Equals(tile)))))
-                        with
-                    | (_, []) -> out
-                    | (_, plays) -> ([], plays @ (out |> snd))
+                if pieceIsAllowed allowedLetters tile then
+                    loopPiece 
+                        f 
+                        (rack |> List.removeAt (rack |> List.findIndex (fun c -> c.Equals(tile))))
+                        (Seq.toList allowedLetters)
+                        tile
+                        out
                 else
                     out
 
             aux rack' allowedLetters out
 
     aux rack allowedLetters ([], [])
-
-let loopBlank
-    (f: Piece -> Piece list -> Plays)
-    (blank: Piece)
-    (restOfTheRack: Piece list)
-    (allowedLetters: Set<char>) 
-    : Plays =
-    let rec aux blankLetters rack out : Plays =
-        match blankLetters with 
-        | [] -> out
-        | tile :: blankLetters' -> 
-            let out = 
-                match (f tile rack) with
-                | (_, []) -> out
-                | (_, plays) -> ([], plays @ (out |> snd))
-
-            aux blankLetters' rack out
-
-    aux (getAllowedPieces allowedLetters blank) restOfTheRack ([], [])
 
 let goOn
     genAux // The genAux function defined below
@@ -393,22 +397,9 @@ let rec genAux
         let possiblePlays =
             loopRack
                 (fun c rack' ->
-                    goOn (genAux) state pieces anchor pos direction (getNormalPiece c) word rack' (nextArc (getNormalPiece c) arc) arc false plays)
+                    goOn (genAux) state pieces anchor pos direction c word rack' (nextArc c arc) arc false plays)
                 rack
                 allowedLetters
-
-        let possiblePlays =
-            if hasBlank rack && (possiblePlays |> snd) = [] then
-                let blank = List.find isBlank rack
-                let remaining = List.removeAt (List.findIndex isBlank rack) rack 
-                let pl = (plays |> fst, possiblePlays |> snd)
-
-                loopBlank 
-                    (fun c r -> goOn (genAux) state pieces anchor pos direction (getNormalPiece c) word r (nextArc (getNormalPiece c) arc) arc false pl)
-                    blank
-                    remaining
-                    allowedLetters
-            else possiblePlays
         
         match possiblePlays with
         | (_, []) ->
