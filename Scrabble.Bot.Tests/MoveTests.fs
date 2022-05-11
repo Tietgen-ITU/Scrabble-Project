@@ -293,9 +293,10 @@ let playBlankWordDirect () =
             state
 
     let res = gen state pieces (0, 0) State.Horizontal
-    Assert.AreEqual(((1, 0), (0u, ('A', 0))), res |> List.head |> List.item 0)
-    Assert.AreEqual(((2, 0), (0u, ('R', 0))), res |> List.head |> List.item 1)
-    Assert.AreEqual(((3, 0), (0u, ('E', 0))), res |> List.head |> List.item 2)
+    Assert.AreEqual(PlayedLetter((0, 0), (3u, ('C', 1))), res |> List.head |> List.item 0)
+    Assert.AreEqual(PlayLetter((1, 0), (0u, ('A', 0))), res |> List.head |> List.item 1)
+    Assert.AreEqual(PlayLetter((2, 0), (0u, ('R', 0))), res |> List.head |> List.item 2)
+    Assert.AreEqual(PlayLetter((3, 0), (0u, ('E', 0))), res |> List.head |> List.item 3)
 
 [<Test>]
 let playBlankInMiddleWordDirect () =
@@ -320,6 +321,7 @@ let playBlankInMiddleWordDirect () =
     let res = gen state pieces (0, 0) State.Horizontal
     printf "%A" res
 
-    Assert.AreEqual(((1, 0), (1u, ('A', 1))), res |> List.head |> List.item 0)
-    Assert.AreEqual(((2, 0), (0u, ('R', 0))), res |> List.head |> List.item 1)
-    Assert.AreEqual(((3, 0), (5u, ('E', 1))), res |> List.head |> List.item 2)
+    Assert.AreEqual(PlayedLetter((0, 0), (3u, ('C', 1))), res |> List.head |> List.item 0)
+    Assert.AreEqual(PlayLetter((1, 0), (1u, ('A', 1))), res |> List.head |> List.item 1)
+    Assert.AreEqual(PlayLetter((2, 0), (0u, ('R', 0))), res |> List.head |> List.item 2)
+    Assert.AreEqual(PlayLetter((3, 0), (5u, ('E', 1))), res |> List.head |> List.item 3)
