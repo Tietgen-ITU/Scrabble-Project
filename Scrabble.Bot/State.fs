@@ -3,7 +3,7 @@ module internal State
 open ScrabbleUtil
 
 // Make sure to keep your state localised in this module. It makes your life a whole lot easier.
-// Currently, it only keeps track of your hand, your player numer, your board, and your dictionary,
+// Currently, it only keeps track of your hand, your player number, your board, and your dictionary,
 // but it could, potentially, keep track of other useful
 // information, such as number of players, player turn, etc.
 
@@ -15,7 +15,7 @@ type state =
       hand: MultiSet.MultiSet<uint32>
       players: List<bool>
       playerTurn: uint32
-      tilePlacement: Map<coord, (uint32 * (char * int))> }
+      tilePlacement: Map<coord, uint32 * (char * int)> }
 
 let mkState b d pn h pl pt =
     { board = b
@@ -24,8 +24,8 @@ let mkState b d pn h pl pt =
       hand = h
       players = pl
       playerTurn = pt
-      tilePlacement = Map.empty<coord, (uint32 * (char * int))>
-      points = [ for i in 1 .. pl.Length -> 0 ] }
+      tilePlacement = Map.empty<coord, uint32 * (char * int)>
+      points = [ for _ in 1 .. pl.Length -> 0 ] }
 
 type Direction =
     | Horizontal
@@ -45,9 +45,9 @@ let removeTileFromHand st tileId =
     { st with hand = MultiSet.removeSingle tileId st.hand }
 
 let removeTilesFromHand (tileIds: List<uint32>) st =
-    List.fold (fun acc tileId -> removeTileFromHand acc tileId) st tileIds
+    List.fold removeTileFromHand st tileIds
 
-let addTileToHand st (tileId, (amount: uint32)) =
+let addTileToHand st (tileId, amount: uint32) =
     let rec aux ms id =
         function
         | 0u -> ms
@@ -56,11 +56,11 @@ let addTileToHand st (tileId, (amount: uint32)) =
     { st with hand = (aux st.hand tileId amount) }
 
 let addPoints (playerId: uint32) points st =
-    { st with points = List.updateAt (int playerId - 1) (points + (st.points.Item(int playerId - 1))) st.points }
+    { st with points = List.updateAt (int playerId - 1) (points + st.points.Item(int playerId - 1)) st.points }
 
 let private (|FoundValue|_|) key map = Map.tryFind key map
 
-let placeLetter (tile: (uint32 * (char * int))) (st: state) (coordinate: coord) =
+let placeLetter (tile: uint32 * (char * int)) (st: state) (coordinate: coord) =
     // TODO: Place them on the board as well... and not only in the new map
     match st.tilePlacement with
     | FoundValue coordinate _ -> failwith "There is already a tile placed at that coordinate"
@@ -74,10 +74,6 @@ let hasLetter coordinate =
     | FoundValue coordinate _ -> true
     | _ -> false
 
-
-
-    
-
 let hasSquare (board: Parser.board) coord =
     match board.squares coord with
     | StateMonad.Success a ->
@@ -87,7 +83,6 @@ let hasSquare (board: Parser.board) coord =
     | StateMonad.Failure _ -> false
 
 let isBeginingOfWord pos orientation st =
-
     let adjacentCoord =
         match orientation with
         | Vertical -> (pos |> fst, (pos |> snd) + 1)

@@ -20,9 +20,9 @@
 
     let empty: MultiSet<'a> = Map.empty<'a, uint32>
 
-    let fold (f: ('a -> 'b -> uint32 -> 'a)) (acc: 'a) (s: MultiSet<'b>) : 'a = Map.fold f acc s
+    let fold (f: 'a -> 'b -> uint32 -> 'a) (acc: 'a) (s: MultiSet<'b>) : 'a = Map.fold f acc s
 
-    let foldBack (f: ('a -> uint32 -> 'b -> 'b)) (s: MultiSet<'a>) (acc: 'b) : 'b = Map.foldBack f s acc
+    let foldBack (f: 'a -> uint32 -> 'b -> 'b) (s: MultiSet<'a>) (acc: 'b) : 'b = Map.foldBack f s acc
 
     let size (s: MultiSet<'a>) : uint32 =
         s |> fold (fun state _ value -> state + value) 0u
@@ -56,7 +56,7 @@
         s
         |> fold (fun state key value -> state @ [ for _ in 1u .. value -> key ]) []
 
-    let map (f: ('a -> 'b)) (s: MultiSet<'a>) : MultiSet<'b> =
+    let map (f: 'a -> 'b) (s: MultiSet<'a>) : MultiSet<'b> =
         s
         |> fold (fun state key value -> add (f key) value state) empty
 

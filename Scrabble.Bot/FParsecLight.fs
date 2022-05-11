@@ -27,8 +27,8 @@
         let opt     (p : Parser<'a>) : Parser<'a option> = opt p
         let between l r (p : Parser<'c>) : Parser<'c> = between l r p
 
-        let sepBy  (p : Parser<'a>) sep : (Parser<'a list>) = sepBy p sep
-        let sepBy1 (p : Parser<'a>) sep : (Parser<'a list>) = sepBy1 p sep
+        let sepBy  (p : Parser<'a>) sep : Parser<'a list> = sepBy p sep
+        let sepBy1 (p : Parser<'a>) sep : Parser<'a list> = sepBy1 p sep
 
         let anyChar     : Parser<char> = anyChar
         let asciiLetter : Parser<char> = asciiLetter
@@ -45,4 +45,4 @@
         let getSuccess : ParserResult<'a> -> 'a =
             function
             | Success(s, _, _) -> s
-            | failure          -> failwith (sprintf "%A" failure)
+            | failure          -> failwith $"%A{failure}"

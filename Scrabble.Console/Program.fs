@@ -3,9 +3,9 @@
 open System
 
 let time f =
-    let start = System.DateTime.Now
+    let start = DateTime.Now
     let res = f ()
-    let finish = System.DateTime.Now
+    let finish = DateTime.Now
     (res, finish - start)
 
 let readLines filePath = System.IO.File.ReadLines(filePath)
@@ -14,17 +14,17 @@ let spawnMultiples name dict bot =
     let rec aux =
         function
         | 0 -> []
-        | x -> (sprintf "%s%d" name x, dict, bot) :: aux (x - 1)
+        | x -> ( $"%s{name}%d{x}", dict, bot) :: aux (x - 1)
 
     aux >> List.rev
 
 [<EntryPoint>]
-let main argv =
-    ScrabbleUtil.DebugPrint.toggleDebugPrint false // Change to false to supress debug output
+let main _ =
+    ScrabbleUtil.DebugPrint.toggleDebugPrint false // Change to false to suppress debug output
 
-    System.Console.BackgroundColor <- System.ConsoleColor.White
-    System.Console.ForegroundColor <- System.ConsoleColor.Black
-    System.Console.Clear()
+    Console.BackgroundColor <- ConsoleColor.White
+    Console.ForegroundColor <- ConsoleColor.Black
+    Console.Clear()
 
 
     let board = ScrabbleUtil.StandardBoard.standardBoard ()
@@ -54,7 +54,7 @@ let main argv =
 
     // Uncomment this line to call your client
 
-    let (dictionary, time) =
+    let dictionary, _ =
         time (fun () -> ScrabbleUtil.Dictionary.mkDict words dictAPI)
 
     let ourPlayers =
@@ -72,7 +72,7 @@ let main argv =
 
     do ScrabbleServer.Comm.startGame board dictionary handSize timeout tiles seed port players
 
-    ScrabbleUtil.DebugPrint.forcePrint ("Server has terminated. Press Enter to exit program.\n")
-    System.Console.ReadLine() |> ignore
+    ScrabbleUtil.DebugPrint.forcePrint "Server has terminated. Press Enter to exit program.\n"
+    Console.ReadLine() |> ignore
 
     0

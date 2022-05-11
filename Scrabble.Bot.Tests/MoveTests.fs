@@ -4,7 +4,6 @@ open NUnit.Framework
 
 open Moves
 open Parser
-open System
 
 let readLines filePath = System.IO.File.ReadLines(filePath)
 
@@ -61,8 +60,8 @@ let getSortedAndPieces () =
 
 [<Test>]
 let playWord () =
-    ScrabbleUtil.DebugPrint.toggleDebugPrint true // Change to false to supress debug output
-    let (sorted, pieces) = getSortedAndPieces ()
+    ScrabbleUtil.DebugPrint.toggleDebugPrint true // Change to false to suppress debug output
+    let sorted, pieces = getSortedAndPieces ()
 
     let lookupTable = getLookuptable sorted
 
@@ -87,7 +86,7 @@ let playWord () =
 
 [<Test>]
 let playWordDirect () =
-    let (sorted, pieces) = getSortedAndPieces ()
+    let sorted, pieces = getSortedAndPieces ()
 
     let lookupTable = getLookuptable sorted
 
@@ -106,7 +105,7 @@ let playWordDirect () =
             state
 
     let res = gen state pieces (0, 0) State.Horizontal
-    printf "%A\n" res
+    printf $"%A{res}\n"
     Assert.AreEqual(PlayedLetter ((0,0), (3u, ('C', 1))), res |> List.head |> List.item 0)
     Assert.AreEqual(PlayLetter((1, 0), (1u, ('A', 1))), res |> List.head |> List.item 1)
     Assert.AreEqual(PlayLetter((2, 0), (18u, ('R', 1))), res |> List.head |> List.item 2)
@@ -114,7 +113,7 @@ let playWordDirect () =
 
 [<Test>]
 let playFirstWord () =
-    let (sorted, pieces) = getSortedAndPieces ()
+    let sorted, pieces = getSortedAndPieces ()
 
     let lookupTable = getLookuptable sorted
 
@@ -128,7 +127,7 @@ let playFirstWord () =
 
     let res = getNextMove state pieces |> Option.get
 
-    printf "%A\n" res
+    printf $"%A{res}\n"
     Assert.AreEqual(((0, 0), (1u, ('A', 1))), res |> List.item 0)
     Assert.AreEqual(((0, -1), (3u, ('C', 3))), res |> List.item 1)
     Assert.AreEqual(((0, 1), (18u, ('R', 1))), res |> List.item 2)
@@ -136,7 +135,7 @@ let playFirstWord () =
 
 [<Test>]
 let playWordDirectValidate () =
-    let (sorted, pieces) = getSortedAndPieces ()
+    let sorted, _ = getSortedAndPieces ()
 
     let lookupTable = getLookuptable sorted
 
@@ -160,11 +159,10 @@ let playWordDirectValidate () =
           PlayLetter((2, 0), (18u, ('R', 1)))
           PlayLetter((3, 0), (5u, ('E', 1))) ]
 
-    Assert.IsTrue(validateMove state pieces move)
+    Assert.IsTrue(validateMove state move)
 
 [<Test>]
 let invalidMove1 () =
-    let (_, pieces) = getSortedAndPieces ()
     let state = mockState []
 
     let state =
@@ -184,11 +182,10 @@ let invalidMove1 () =
           PlayLetter((1, 0), (18u, ('R', 1)))
           PlayLetter((1, 1), (5u, ('E', 1))) ]
 
-    Assert.IsFalse(validateMove state pieces move)
+    Assert.IsFalse(validateMove state move)
 
 [<Test>]
 let invalidMove2 () =
-    let (_, pieces) = getSortedAndPieces ()
     let state = mockState []
 
     let state =
@@ -205,11 +202,10 @@ let invalidMove2 () =
           PlayLetter((1, 0), (18u, ('R', 1)))
           PlayLetter((1, 1), (5u, ('E', 1))) ]
 
-    Assert.IsFalse(validateMove state pieces move)
+    Assert.IsFalse(validateMove state move)
 
 [<Test>]
 let invalidMove3 () =
-    let (_, pieces) = getSortedAndPieces ()
     let state = mockState []
 
     let state =
@@ -226,11 +222,10 @@ let invalidMove3 () =
           PlayLetter((2, -1), (18u, ('R', 1)))
           PlayLetter((3, -1), (5u, ('E', 1))) ]
 
-    Assert.IsTrue(validateMove state pieces move)
+    Assert.IsTrue(validateMove state move)
 
 [<Test>]
 let invalidMove4 () =
-    let (_, pieces) = getSortedAndPieces ()
     let state = mockState []
 
     let state =
@@ -248,11 +243,10 @@ let invalidMove4 () =
           PlayLetter((3, 1), (5u, ('E', 1))) ]
 
     // "BARE" doesn't exist in the dictionary
-    Assert.IsFalse(validateMove state pieces move)
+    Assert.IsFalse(validateMove state move)
 
 [<Test>]
 let invalidMove5 () =
-    let (_, pieces) = getSortedAndPieces ()
     let state = mockState []
 
     let state =
@@ -272,11 +266,11 @@ let invalidMove5 () =
           PlayLetter((2, 1), (18u, ('R', 1)))
           PlayLetter((3, 1), (5u, ('E', 1))) ]
 
-    Assert.IsFalse(validateMove state pieces move)
+    Assert.IsFalse(validateMove state move)
 
 [<Test>]
 let playBlankWordDirect () =
-    let (sorted, pieces) = getSortedAndPieces ()
+    let _, pieces = getSortedAndPieces ()
 
     let state =
         mockState [ 0u
@@ -300,7 +294,7 @@ let playBlankWordDirect () =
 
 [<Test>]
 let playBlankInMiddleWordDirect () =
-    let (sorted, pieces) = getSortedAndPieces ()
+    let sorted, pieces = getSortedAndPieces ()
 
     let lookupTable = getLookuptable sorted
 
@@ -319,7 +313,7 @@ let playBlankInMiddleWordDirect () =
             state
 
     let res = gen state pieces (0, 0) State.Horizontal
-    printf "%A" res
+    printf $"%A{res}"
 
     Assert.AreEqual(PlayedLetter((0, 0), (3u, ('C', 1))), res |> List.head |> List.item 0)
     Assert.AreEqual(PlayLetter((1, 0), (1u, ('A', 1))), res |> List.head |> List.item 1)

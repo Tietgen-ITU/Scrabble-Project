@@ -6,7 +6,6 @@ open MultiSet
 
 [<Test>]
 let empty_Returns_Empty_MultiSet () =
-    let e = empty
     Assert.IsTrue(isEmpty empty)
     Assert.AreEqual(0u, size empty)
 
@@ -235,7 +234,7 @@ let foldBack_Folds_Over_MultiSet_Key_Sum () =
     let s4 = addSingle 2u s3
 
     let result =
-        foldBack (fun key value state -> state + key) s4 0u
+        foldBack (fun key _ state -> state + key) s4 0u
 
     Assert.AreEqual(7u, result)
 
@@ -430,12 +429,12 @@ let intersection_Intersects_Two_MultiSet () =
 let codejudge_sum_1 () =
     let s31 =
         ofList [ for i in 1 .. 100 do
-                     for j in i .. 100 do
+                     for _ in i .. 100 do
                          yield i ]
 
     let s31' =
         ofList [ for i in 1 .. 100 do
-                     for j in i .. 100 do
+                     for _ in i .. 100 do
                          yield i
                          yield i ]
 
@@ -445,12 +444,12 @@ let codejudge_sum_1 () =
 let codejudge_sum_2 () =
     let s32 =
         ofList [ for i in 1 .. 100 do
-                     for j in i .. 100 do
+                     for _ in i .. 100 do
                          yield i ]
 
     let s32' =
         ofList [ for i in 1 .. 100 do
-                     for j in i .. 100 do
+                     for _ in i .. 100 do
                          yield i
                          yield i ]
 
@@ -460,12 +459,12 @@ let codejudge_sum_2 () =
 let codejudge_sum_3 () =
     let s33 =
         ofList [ for i in 1 .. 100 do
-                     for j in i .. 100 do
+                     for _ in i .. 100 do
                          yield i ]
 
     let s33' =
         ofList [ for i in 1 .. 100 do
-                     for j in i .. 100 do
+                     for _ in i .. 100 do
                          yield i
                          yield i ]
 
@@ -475,13 +474,7 @@ let codejudge_sum_3 () =
 let codejudge_sum_4 () =
     let s34 =
         ofList [ for i in 1 .. 100 do
-                     for j in i .. 100 do
-                         yield i ]
-
-    let s34' =
-        ofList [ for i in 1 .. 100 do
-                     for j in i .. 100 do
-                         yield i
+                     for _ in i .. 100 do
                          yield i ]
 
     Assert.AreEqual(10100u, (size (sum s34 s34 |> map (fun i -> i % 10))))
@@ -490,12 +483,12 @@ let codejudge_sum_4 () =
 let codejudge_sum_5 () =
     let s35 =
         ofList [ for i in 1 .. 100 do
-                     for j in i .. 100 do
+                     for _ in i .. 100 do
                          yield i ]
 
     let s35' =
         ofList [ for i in 1 .. 100 do
-                     for j in i .. 100 do
+                     for _ in i .. 100 do
                          yield i
                          yield i ]
 

@@ -16,14 +16,14 @@ let state =
 
 let emptyState = mkState [] [] []
 
-let arith (a: SM<int>) (b: SM<int>) (f: (int -> int -> int)) =
+let arith (a: SM<int>) (b: SM<int>) (f: int -> int -> int) =
     a >>= (fun x -> b >>= (fun y -> ret (f x y)))
 
 let add (a: SM<int>) (b: SM<int>) : SM<int> = arith a b (fun x y -> x + y)
 let sub (a: SM<int>) (b: SM<int>) : SM<int> = arith a b (fun x y -> x - y)
 let mul (a: SM<int>) (b: SM<int>) : SM<int> = arith a b (fun x y -> x * y)
 
-let arith0Sens (a: SM<int>) (b: SM<int>) (f: (int -> int -> int)) =
+let arith0Sens (a: SM<int>) (b: SM<int>) (f: int -> int -> int) =
     a
     >>= (fun x ->
         b
@@ -82,7 +82,7 @@ let (.||.) b1 b2 =
     ~~(~~b1 .&&. ~~b2) (* boolean disjunction *)
 
 let (.->.) b1 b2 =
-    (~~b1) .||. b2 (* boolean implication *)
+    ~~b1 .||. b2 (* boolean implication *)
 
 let (.=.) a b = AEq(a, b)
 let (.<.) a b = ALt(a, b)
@@ -101,18 +101,18 @@ let rec arithEval a : SM<int> =
     | N n -> ret n
     | V v -> lookup v
     | WL -> wordLength
-    | PV p -> arithEval p >>= (fun x -> pointValue x)
+    | PV p -> arithEval p >>= pointValue
     | Add (a, b) -> add (arithEval a) (arithEval b)
     | Sub (a, b) -> sub (arithEval a) (arithEval b)
     | Mul (a, b) -> mul (arithEval a) (arithEval b)
     | Div (a, b) -> div (arithEval a) (arithEval b)
     | Mod (a, b) -> modulo (arithEval a) (arithEval b)
-    | CharToInt (c) -> charEval c >>= (fun x -> ret (int x))
+    | CharToInt c -> charEval c >>= (fun x -> ret (int x))
 
 and charEval c : SM<char> =
     match c with
     | C c -> ret c
-    | CV v -> arithEval v >>= (fun x -> characterValue x)
+    | CV v -> arithEval v >>= characterValue
     | ToUpper c ->
         charEval c
         >>= (fun x -> ret (System.Char.ToUpper x))
@@ -121,7 +121,7 @@ and charEval c : SM<char> =
         >>= (fun x -> ret (System.Char.ToLower x))
     | IntToChar i -> arithEval i >>= (fun x -> ret (char x))
 
-let numericComparison (a: aExp) (b: aExp) (f: (int -> int -> bool)) : SM<bool> =
+let numericComparison (a: aExp) (b: aExp) (f: int -> int -> bool) : SM<bool> =
     arithEval a
     >>= (fun x -> arithEval b >>= (fun y -> ret (f x y)))
 
@@ -166,7 +166,7 @@ type stm =
 let rec stmntEval stmnt : SM<unit> =
     match stmnt with
     | Declare v -> declare v
-    | Ass (v, a) -> arithEval a >>= (fun x -> update v x)
+    | Ass (v, a) -> arithEval a >>= (update v)
     | Skip -> ret ()
     | Seq (s1, s2) -> stmntEval s1 >>= (fun _ -> stmntEval s2)
     | ITE (b, s1, s2) ->
@@ -195,7 +195,7 @@ type StateBuilder() =
     member this.Delay(f) = f ()
     member this.Combine(a, b) = a >>= (fun _ -> b)
 
-let prog = new StateBuilder()
+let prog = StateBuilder()
 
 let rec arithEval2 (a: aExp) : SM<int> =
     prog {
@@ -231,7 +231,7 @@ let rec arithEval2 (a: aExp) : SM<int> =
             let x = arithEval2 a
             let y = arithEval2 b
             return! arith0Sens x y (fun x y -> x % y)
-        | CharToInt (c) ->
+        | CharToInt c ->
             let! x = charEval2 c
             return int x
     }
@@ -355,7 +355,7 @@ let stmntToBoardFun (stm: stm) (squares: Map<int, 'a>) : coord -> Result<'a opti
         >>= (fun x ->
             match squares.TryFind x with
             | Some x -> ret (Some x)
-            | None -> ret (None))
+            | None -> ret None)
         |> evalSM state
 
 type board =

@@ -12,17 +12,13 @@ module internal PointCalculator =
 
     let private getResult defvalue = function
         | StateMonad.Success a -> a
-        | StateMonad.Failure a -> defvalue
+        | StateMonad.Failure _ -> defvalue
 
     let calculateWordPoint (word : (coord * (char * int)) list) (board: Parser.board) : int = 
-
-        let mapToList  (square:Map<int,Parser.squareFun>)  =
-            Map.toList square 
-
         let mapToListFunc (word: (char*int) list) pos (square:Map<int,Parser.squareFun>) =
-            Map.toList square |> List.map (fun (a, sqFun) -> (a, (fun acc -> sqFun word pos acc)))
+            Map.toList square |> List.map (fun (a, sqFun) -> (a, (sqFun word pos)))
 
-        let letters = List.map (fun (_, letter) -> letter) word
+        let letters = List.map snd word
 
          (*
             What is done below: 
@@ -34,10 +30,6 @@ module internal PointCalculator =
 
         List.mapi(fun index (coord , _) -> mapToListFunc letters index (getSquare coord board.squares)) word
         |> List.fold (fun acc value -> value @ acc) List.Empty 
-        |> List.sortByDescending (fun (priority , _) -> priority)  
+        |> List.sortByDescending fst  
         |> List.fold (fun acc (_,value) -> value acc |> getResult acc) 0
-        
-    
-    
-
-    
+         
