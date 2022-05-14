@@ -11,16 +11,6 @@ let isBlank =
 
 let hasBlank = List.exists isBlank
 
-let getNormalPiece =
-    function
-    | Normal a -> a
-    | _ -> failwith "this is not a normal piece"
-
-let getPieceAsBlank =
-    function
-    | Normal _ -> failwith "this is not a blank piece"
-    | Blank a -> a
-
 let pieceIsAllowed allowedLetters =
     function
     | Normal (_, (ch, _)) -> Set.contains ch allowedLetters
