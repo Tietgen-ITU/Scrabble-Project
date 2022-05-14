@@ -57,10 +57,10 @@ let insert_lookup_Many_Words () =
     Assert.IsFalse(lookup "cary" dict)
 
 [<Test>]
-let codejudge_bug_1() =
-   let res = lookup "HE" (empty () |> insert "HELLO")
-   
-   Assert.IsFalse(res)
+let codejudge_bug_1 () =
+    let res = lookup "HE" (empty () |> insert "HELLO")
+
+    Assert.IsFalse(res)
 
 [<Test>]
 let green_4_02_Test07_01 () =
@@ -70,8 +70,7 @@ let green_4_02_Test07_01 () =
         readLines path
         |> Seq.fold (fun acc s -> insert s acc) (empty ())
 
-    let dict =
-        fromFile "../../../EnglishDictionary.txt"
+    let dict = fromFile "../../../EnglishDictionary.txt"
 
     Assert.IsTrue(lookup "TONIGHT" dict)
 
@@ -84,8 +83,7 @@ let yellow_4_02_Test02_1 () =
         |> Seq.toList
 
     // Insert all
-    let dict =
-        List.fold (fun acc s -> insert s acc) (empty ()) ss
+    let dict = List.fold (fun acc s -> insert s acc) (empty ()) ss
 
     // Reverse a string
     let reverse (s: string) =

@@ -7,65 +7,39 @@ open System.IO
 
 open ScrabbleUtil.DebugPrint
 
-// The RegEx module is only used to parse human input. It is not used for the final product.
-
-module RegEx =
-    open System.Text.RegularExpressions
-
-    let (|Regex|_|) pattern input =
-        let m = Regex.Match(input, pattern)
-
-        if m.Success then
-            Some(List.tail [ for g in m.Groups -> g.Value ])
-        else
-            None
-
-    let parseMove ts =
-        let pattern = @"([-]?[0-9]+[ ])([-]?[0-9]+[ ])([0-9]+)([A-Z]{1})([0-9]+)[ ]?"
-
-        Regex.Matches(ts, pattern)
-        |> Seq.cast<Match>
-        |> Seq.map (fun t ->
-            match t.Value with
-            | Regex pattern [ x; y; id; c; p ] -> ((x |> int, y |> int), (id |> uint32, (c |> char, p |> int)))
-            | _ -> failwith "Failed (should never happen)")
-        |> Seq.toList
-
 module Print =
 
     let printHand pieces hand =
         hand
-        |> MultiSet.fold (fun _ x i -> forcePrint (sprintf "%d -> (%A, %d)\n" x (Map.find x pieces) i)) ()
+        |> MultiSet.fold (fun _ x i -> forcePrint $"%d{x} -> (%A{Map.find x pieces}, %d{i})\n") ()
 
 module Scrabble =
-    open System.Threading
-
     let playGame cstream pieces (st: State.state) =
 
         let rec aux (st: State.state) =
             Print.printHand pieces (State.hand st)
-            
-            if st.playerTurn = st.playerId then
-                let move = 
 
+            if st.playerTurn = st.playerId then
+                let move =
                     let mv = Moves.getNextMove st pieces
+
                     match mv with
                     | Some a -> SMPlay a
                     | None -> SMPass
 
-                debugPrint (sprintf "Player %d -> Server:\n%A\n" (State.playerId st) move) // keep the debug lines. They are useful.
+                debugPrint $"Player %d{State.playerId st} -> Server:\n%A{move}\n" // keep the debug lines. They are useful.
                 send cstream move
-                debugPrint (sprintf "Player %d <- Server:\n%A\n" (State.playerId st) move) // keep the debug lines. They are useful.
+                debugPrint $"Player %d{State.playerId st} <- Server:\n%A{move}\n" // keep the debug lines. They are useful.
 
             let msg = recv cstream
 
             match msg with
             | RCM (CMPlaySuccess (ms, points, newPieces)) ->
                 (* Successful play by you. Update your state (remove old tiles, add the new ones, change turn, etc) *)
-                let tilesToRemove = List.map (fun (_, (tileId, _)) -> (tileId)) ms
+                let tilesToRemove = List.map (fun (_, (tileId, _)) -> tileId) ms
 
                 let st' =
-                    List.fold (fun acc s -> State.addTileToHand acc s) st newPieces
+                    List.fold State.addTileToHand st newPieces
                     |> State.placeLetters (Seq.ofList ms)
                     |> State.changeTurn
                     |> State.addPoints st.playerId points
@@ -89,9 +63,12 @@ module Scrabble =
                 (*The player failed to make a move.. let the next player have the turn*)
                 let st' = State.changeTurn st
                 aux st'
-            | RCM a -> failwith (sprintf "not implmented: %A" a)
+            | RCM (CMForfeit pid) ->
+                let st' = State.removePlayer st (int pid)
+                aux st'
+            | RCM a -> failwith $"not implmented: %A{a}"
             | RGPE err ->
-                printfn "Gameplay Error:\n%A" err
+                printfn $"Gameplay Error:\n%A{err}"
                 aux st
 
 
@@ -108,26 +85,19 @@ module Scrabble =
         (timeout: uint32 option)
         (cstream: Stream)
         =
-        debugPrint (
-            sprintf
-                "Starting game!
-                      number of players = %d
-                      player id = %d
-                      player turn = %d
-                      hand =  %A
-                      timeout = %A\n\n"
-                numPlayers
-                playerId
-                playerTurn
-                hand
-                timeout
-        )
+        debugPrint
+            $"Starting game!
+                      number of players = %d{numPlayers}
+                      player id = %d{playerId}
+                      player turn = %d{playerTurn}
+                      hand =  %A{hand}
+                      timeout = %A{timeout}\n\n"
 
         let dict = dictf true // Uncomment if using a gaddag for your dictionary
         //let dict = dictf false // Uncomment if using a trie for your dictionary
         let board = Parser.mkBoard boardP
 
-        let players = [ for i in 0 .. int numPlayers - 1 -> true ]
+        let players = [ for _ in 0 .. int numPlayers - 1 -> true ]
 
         let handSet = List.fold (fun acc (x, k) -> MultiSet.add x k acc) MultiSet.empty hand
 

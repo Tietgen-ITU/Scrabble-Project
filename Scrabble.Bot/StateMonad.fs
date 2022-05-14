@@ -39,7 +39,7 @@ let bind (f: 'a -> SM<'b>) (S a: SM<'a>) : SM<'b> =
 
 
 let ret (v: 'a) : SM<'a> = S(fun s -> Success(v, s))
-let fail err : SM<'a> = S(fun s -> Failure err)
+let fail err : SM<'a> = S(fun _ -> Failure err)
 
 let (>>=) x f = bind f x
 let (>>>=) x f = x >>= (fun () -> f)
@@ -50,12 +50,11 @@ let pop: SM<unit> = S(fun s -> Success((), { s with vars = s.vars.Tail }))
 
 let wordLength: SM<int> = S(fun s -> Success(s.word.Length, s))
 
-let getCharacter (pos: int) (f: (char * int) -> 'a) : SM<'a> =
+let getCharacter (pos: int) (f: char * int -> 'a) : SM<'a> =
     S (fun s ->
-        if pos >= s.word.Length || pos < 0 then
-            Failure(IndexOutOfBounds pos)
-        else
-            Success(s.word.[pos] |> f, s))
+        match pos >= s.word.Length || pos < 0 with
+        | true -> Failure(IndexOutOfBounds pos)
+        | false -> Success(s.word[pos] |> f, s))
 
 let characterValue (pos: int) : SM<char> = getCharacter pos fst
 
@@ -71,7 +70,7 @@ let lookup (x: string) : SM<int> =
             | None -> aux ms
 
     S (fun s ->
-        match aux (s.vars) with
+        match aux s.vars with
         | Some v -> Success(v, s)
         | None -> Failure(VarNotFound x))
 
@@ -81,7 +80,7 @@ let declare (var: string) : SM<unit> =
         | true -> Failure(ReservedName var)
         | false -> Success((), state)
 
-    let stackEmpty (state: State) : Result<Map<string, int> * (Map<string, int> list), Error> =
+    let stackEmpty (state: State) : Result<Map<string, int> * Map<string, int> list, Error> =
         match state.vars with
         | [] -> Failure(EmptyStack)
         | xs :: x -> Success((xs, x))
@@ -97,7 +96,7 @@ let declare (var: string) : SM<unit> =
             match stackEmpty s with
             | Success (x, xs) ->
                 match exists var s with
-                | Success _ -> Success((), { s with vars = (x.Add(var, 0)) :: xs })
+                | Success _ -> Success((), { s with vars = x.Add(var, 0) :: xs })
                 | Failure err -> Failure err
             | Failure err -> Failure err
         | Failure err -> Failure err)
@@ -109,13 +108,13 @@ let update (var: string) (value: int) : SM<unit> =
         | [] -> Failure(VarNotFound var)
         | m :: ms ->
             match m.ContainsKey x with
-            | true -> Success((), (m.Add(x, value)) :: ms)
+            | true -> Success((), m.Add(x, value) :: ms)
             | false ->
                 match aux ms x value with
                 | Success ((), s) -> Success((), m :: s)
-                | Failure (err) -> Failure(err)
+                | Failure err -> Failure(err)
 
     S (fun s ->
-        match aux (s.vars) var value with
+        match aux s.vars var value with
         | Success ((), b) -> Success((), { s with vars = b })
-        | Failure (err) -> Failure(err))
+        | Failure err -> Failure(err))
