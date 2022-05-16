@@ -182,3 +182,32 @@ let allowedLettersUpdates () =
 
     Assert.AreEqual((Set.ofList []), Map.find (-3, 0) state.crossCheck)
     Assert.AreEqual((Set.ofList [ 'Y' ]), Map.find (3, 0) state.crossCheck)
+
+[<Test>]
+let hangarHexed () =
+    let move =
+        [ ((-4, -1), (3u, ('E', 1)))
+          ((-4, -2), (1u, ('X', 1)))
+          ((-4, -3), (1u, ('E', 1)))
+          ((-4, -4), (1u, ('D', 1))) ]
+
+    let hangar = [
+        ((-4, 0), (3u, ('H', 1)))
+        ((-3, 0), (3u, ('A', 1)))
+        ((-2, 0), (3u, ('N', 1)))
+        ((-1, 0), (3u, ('G', 1)))
+        ((0, 0), (3u, ('A', 1)))
+        ((1, 0), (3u, ('R', 1)))
+    ]
+    
+    let state =
+        mockState [  ] [
+            "HANGAR"
+            "HEXED"
+        ]
+        |> State.placeLetters hangar
+        |> CrossCheck.update move
+        |> State.placeLetters move
+
+    Assert.AreEqual((Set.ofList [ 'C' ]), Map.find (-1, 0) state.crossCheck)
+    Assert.AreEqual((Set.ofList [ 'Y'; 'V' ]), Map.find (3, 0) state.crossCheck)

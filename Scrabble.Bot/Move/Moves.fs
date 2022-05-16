@@ -95,7 +95,7 @@ let loopPiece
     let letters =
         match tile with
         | Normal a -> [ a ]
-        | Blank _ -> List.map (fun x -> (0u, (x, 0))) allowedLetters
+        | Blank _ -> [ (List.map (fun x -> (0u, (x, 0))) allowedLetters) |> List.head ]
 
     let rec goThrough lts plays =
         match lts with

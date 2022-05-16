@@ -133,7 +133,7 @@ let update (word: List<Move>) (st: state) : state =
         map
         |> Map.add coord Set.empty
         |> Map.add wordStartP1Coord (getAllowedDictLetters (wordStart |> snd) (getAllowedLetters st wordStartP1Coord))
-        |> Map.add wordEndP1Coord (getEndLetters (wordStart |> snd))
+        |> Map.add wordEndP1Coord (Set.intersect (getEndLetters (wordStart |> snd)) (getAllowedLetters st wordEndP1Coord))
 
     let rec aux word dir map =
         match word with
@@ -146,5 +146,5 @@ let update (word: List<Move>) (st: state) : state =
     { st with
         crossCheck =
             st.crossCheck
-            |> aux word reverseDirection
-            |> auxHandleWord direction (List.head word) }
+            |> aux word direction
+            |> auxHandleWord reverseDirection (List.head word) }
