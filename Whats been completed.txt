@@ -1,0 +1,4 @@
+Multi-player and dictionary - yes
+Parsing boards playing on all boards - yes
+parallelism - yes
+Respect the timeout flag - no
